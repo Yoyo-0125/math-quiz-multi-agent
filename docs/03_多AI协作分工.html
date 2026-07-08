@@ -1,0 +1,215 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>03_多AI协作分工</title><style>
+:root{color-scheme:light dark;
+  --ink:#1f2330;--muted:#6b7280;--bg:#fff;--soft:#f6f7fb;--accent:#3b4cca;--accent2:#7b3fb3;
+  --line:#e4e7ef;--th:#eef0f8;--page:#eef0f5;--shadow:0 6px 30px rgba(30,40,80,.08);
+  --quote-ink:#33384a;--row-even:#fafbfe;--strong:#15182a;--pre-bg:#1f2330;--pre-ink:#e8eaf2}
+@media(prefers-color-scheme:dark){:root{
+  --ink:#dfe3ee;--muted:#9aa3b5;--bg:#1a1d27;--soft:#232733;--accent:#8f9bff;--accent2:#c99be6;
+  --line:#333846;--th:#262b39;--page:#111219;--shadow:0 8px 30px rgba(0,0,0,.5);
+  --quote-ink:#c4cad9;--row-even:#20242f;--strong:#f0f2f8;--pre-bg:#0f1117;--pre-ink:#e8eaf2}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:-apple-system,"PingFang SC","Segoe UI",Roboto,"Helvetica Neue",Arial,"Microsoft YaHei",sans-serif;line-height:1.75;font-size:16px}
+.report{max-width:880px;margin:32px auto;background:var(--bg);padding:48px 56px;border-radius:14px;box-shadow:var(--shadow)}
+h1{font-size:1.85em;line-height:1.3;margin:.2em 0 .6em;border-bottom:3px solid var(--accent);padding-bottom:.3em}
+h2{font-size:1.35em;margin:1.8em 0 .6em;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:.25em}
+h3{font-size:1.1em;margin:1.4em 0 .4em;color:var(--accent2)}
+p{margin:.7em 0}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+a.wikilink{color:var(--accent2);font-weight:500;border-bottom:1px dotted var(--accent2)}
+a.wikilink:hover{background:var(--soft)}
+.wikilink-dead{color:var(--muted);border-bottom:1px dashed var(--line)}
+blockquote{margin:1em 0;padding:.6em 1em;background:var(--soft);border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:var(--quote-ink)}
+blockquote p{margin:.3em 0}
+table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:600}
+tr:nth-child(even) td{background:var(--row-even)}
+code{background:var(--soft);padding:.1em .4em;border-radius:4px;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+pre{background:var(--pre-bg);color:var(--pre-ink);padding:16px 18px;border-radius:8px;overflow:auto;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+hr{border:none;border-top:1px solid var(--line);margin:1.6em 0}
+strong{color:var(--strong)}
+.genfoot{margin-top:2.4em;padding-top:1em;border-top:1px dashed var(--line);color:var(--muted);font-size:.82em;text-align:center}
+@media(max-width:640px){.report{padding:24px 18px;margin:0;border-radius:0}}
+@media print{:root{--page:#fff;--bg:#fff;--ink:#1f2330;--strong:#15182a;--quote-ink:#33384a;--row-even:#fafbfe;--soft:#f6f7fb;--line:#e4e7ef;--th:#eef0f8}body{background:#fff}.report{box-shadow:none;margin:0;max-width:none}}
+</style></head><body><main class="report"><h1 id="多-ai-协作分工方案">多 AI 协作分工方案</h1>
+<p><strong>项目名称</strong> Math Quiz Multi-Agent（数学试题多智能体仿写系统） <strong>文档版本</strong> v1.0（2026-07-07） <strong>读者对象</strong> 项目组成员、研学指导老师 <strong>说明</strong> 本文档定义的是<strong>开发过程</strong>中三个 AI 助手的分工，与产品内部四个智能体（Decomposer 等）是两回事。前者造系统，后者是系统的零件。</p>
+<hr />
+<h2 id="一为什么开发也要多-ai-协作">一、为什么开发也要多 AI 协作</h2>
+<p>单靠一个 AI 助手做完整个项目会遇到三个问题：单次对话的上下文装不下全部代码和文档；不同 AI 各有偏科，写代码强的未必擅长写文档，反过来也一样；没有互查，一个 AI 自己写自己夸，错误发现不了。</p>
+<p>这和产品本身遇到的问题一模一样，所以解法也一样：分工、互查、按任务书交接。开发过程复用了产品的设计哲学，这一点本身就是研学展示的看点，答辩时可以并排放两张分工图，左边是产品里的四个智能体，右边是开发中的三个 AI。</p>
+<h2 id="二三个角色">二、三个角色</h2>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>定位</th>
+<th>强项</th>
+<th>不派给它的活</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Claude</td>
+<td>架构师、总编</td>
+<td>架构判断、写规格与任务书、验收把关</td>
+<td>生成图片（不具备此能力）</td>
+</tr>
+<tr>
+<td>Codex</td>
+<td>工程师</td>
+<td>写代码、跑脚本、修 bug、机械改造</td>
+<td>写文档、做取舍决策（写作与判断是弱项）</td>
+</tr>
+<tr>
+<td>GPT</td>
+<td>调研员、美工</td>
+<td>查资料核数据、生成配图、答疑陪练</td>
+<td>直接改项目代码（避免和 Codex 改同一份代码互相踩）</td>
+</tr>
+</tbody>
+</table>
+<p>协作关系：Claude 产出规格和带编号的任务书，人（项目负责人）把任务书投喂给 Codex 或 GPT，成果交回后由 Claude 对照验收标准检查，不合格就带具体问题清单打回。人始终在环上，每份任务书派不派、成果收不收，由人拍板。</p>
+<h2 id="三任务书制度">三、任务书制度</h2>
+<p>每个派出的任务有唯一编号（T01、T02……），任务书是一份独立文件，放在 <code>/Users/jingj/Downloads/math-quiz-multi-agent/coord/</code> 目录下，命名如 <code>T01_稳定性加固_请求.md</code>。</p>
+<p>任务书的固定结构：</p>
+<ol type="1">
+<li><strong>第一行只写任务编号</strong>，单独成行（方便对方一眼确认接的是哪个任务）；</li>
+<li>目标（一句话说清做完后世界有什么不同）；</li>
+<li>输入材料（涉及的文件全路径、相关文档章节号）；</li>
+<li>交付物与验收标准（逐条可检验，直接引用 04 号文档的测试用例编号）;</li>
+<li><strong>禁区</strong>（明确列出不要做的事，这一节比"要做什么"更重要，详见下节）；</li>
+<li>完成后写回 <code>Tnn_完成.md</code>，说明做了什么、怎么自测的、有什么遗留。</li>
+</ol>
+<h3 id="给-codex-的任务书要预防三个已知易错点">给 Codex 的任务书要预防三个已知易错点</h3>
+<table>
+<thead>
+<tr>
+<th>易错点</th>
+<th>任务书里的预防写法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>拿不准的数据瞎编</td>
+<td>"查不到就标注'未核实'，不要编造"</td>
+</tr>
+<tr>
+<td>自由发挥、顺手加功能</td>
+<td>禁区逐条列明："不改四个智能体的提示词""不引入任何第三方包""不动 outputs 文件命名"</td>
+</tr>
+<tr>
+<td>顺手夹带主观分析</td>
+<td>"只交付代码与事实性说明，不写评价性结论"</td>
+</tr>
+</tbody>
+</table>
+<h3 id="给-gpt-的调研任务要求交叉核实">给 GPT 的调研任务要求交叉核实</h3>
+<p>调研类交付必须附来源链接；关键数字（如 API 单价）要求给出官网出处；找不到权威来源的结论标注"待核实"。</p>
+<h2 id="四第一阶段任务分配">四、第一阶段任务分配</h2>
+<p>任务与设计方案（02 号文档第七节）的里程碑一一挂钩：</p>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>任务</th>
+<th>承接方</th>
+<th>对应里程碑</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T01</td>
+<td>稳定性加固：新增 validators.py、budget.py，程序把关三规则，闭环参数化</td>
+<td>Codex</td>
+<td>M1</td>
+<td>M1 所列 8 个测试用例通过</td>
+</tr>
+<tr>
+<td>T02</td>
+<td>模型分工切换：Generator/QC 改用 reasoner，模型名入 .env</td>
+<td>Codex</td>
+<td>M2</td>
+<td>T-INP-01/02/03 通过，含参不等式答案人工核对正确</td>
+</tr>
+<tr>
+<td>T03</td>
+<td>拍照录入：vision_input.py，含 has_figure 与 confidence 分流</td>
+<td>Codex</td>
+<td>M3</td>
+<td>T-OCR-01/02、T-INP-05 通过</td>
+</tr>
+<tr>
+<td>T04</td>
+<td>渲染：KaTeX 本地资产接入、渲染函数、HTML 报告导出</td>
+<td>Codex</td>
+<td>M4</td>
+<td>T-UI-02、T-INP-04 通过</td>
+</tr>
+<tr>
+<td>T05</td>
+<td>Web 界面：server.py、单页应用、专家模式（视觉规格由 Claude 在任务书中给出）</td>
+<td>Codex</td>
+<td>M5</td>
+<td>T-UI-01 通过，浏览器全流程演示成功</td>
+</tr>
+<tr>
+<td>T06</td>
+<td>配图：架构图、流水线示意图、答辩封面图的精绘版本</td>
+<td>GPT</td>
+<td>M6 前</td>
+<td>图面信息与 01/02 号文档一致，无事实错误</td>
+</tr>
+<tr>
+<td>T07</td>
+<td>调研核实：DeepSeek 两档模型与视觉 API 的现行单价、限流规则、reasoner 参数注意事项</td>
+<td>GPT</td>
+<td>M2 前</td>
+<td>每个数字有官网出处，查不到的标"待核实"</td>
+</tr>
+<tr>
+<td>T08</td>
+<td>答辩陪练：根据四份文档生成评委可能提的 20 个问题及参考答话</td>
+<td>GPT</td>
+<td>M6</td>
+<td>问题覆盖技术、成本、伦理（AI 出题的对错责任）三类</td>
+</tr>
+<tr>
+<td>全部文档、任务书、验收</td>
+<td>规格、设计、分工、测试集及其后续修订</td>
+<td>Claude</td>
+<td>全程</td>
+<td>项目负责人评审通过</td>
+</tr>
+</tbody>
+</table>
+<p>派发顺序：T01 → T02 串行（T02 依赖 T01 的校验设施），随后 T03、T04 可并行，T05 最后。T07 宜早做，其结论回填 02 号文档第六节的成本表。</p>
+<h2 id="五失败处理">五、失败处理</h2>
+<p>任一任务交付不合格：验收方（Claude）给出具体问题清单打回一次；第二次仍不合格，任务标记失败，移交项目负责人决定改派或亲自处理，AI 之间避免无休止对修。这条规则与产品内"最多打回 2 次"的闭环设计一致。</p>
+<h2 id="六当前状态与委派记录">六、当前状态与委派记录</h2>
+<ul>
+<li>本轮（M0，四份文档）属写作与架构判断类，按分工规则全部由 Claude 完成，未派出任何任务。</li>
+<li>T01 至 T08 的任务书在文档评审通过后撰写，逐份经项目负责人拍板后派出。</li>
+<li>记录表（随进展更新）：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>状态</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T01–T08</td>
+<td>待派</td>
+<td>等 M0 文档评审通过</td>
+</tr>
+</tbody>
+</table>
+<footer class="genfoot">本 HTML 报告由同名 Markdown 自动生成 · Ogion · 2026-07-07</footer></main></body></html>

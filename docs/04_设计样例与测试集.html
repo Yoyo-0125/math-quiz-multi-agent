@@ -1,0 +1,384 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>04_设计样例与测试集</title><style>
+:root{color-scheme:light dark;
+  --ink:#1f2330;--muted:#6b7280;--bg:#fff;--soft:#f6f7fb;--accent:#3b4cca;--accent2:#7b3fb3;
+  --line:#e4e7ef;--th:#eef0f8;--page:#eef0f5;--shadow:0 6px 30px rgba(30,40,80,.08);
+  --quote-ink:#33384a;--row-even:#fafbfe;--strong:#15182a;--pre-bg:#1f2330;--pre-ink:#e8eaf2}
+@media(prefers-color-scheme:dark){:root{
+  --ink:#dfe3ee;--muted:#9aa3b5;--bg:#1a1d27;--soft:#232733;--accent:#8f9bff;--accent2:#c99be6;
+  --line:#333846;--th:#262b39;--page:#111219;--shadow:0 8px 30px rgba(0,0,0,.5);
+  --quote-ink:#c4cad9;--row-even:#20242f;--strong:#f0f2f8;--pre-bg:#0f1117;--pre-ink:#e8eaf2}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:-apple-system,"PingFang SC","Segoe UI",Roboto,"Helvetica Neue",Arial,"Microsoft YaHei",sans-serif;line-height:1.75;font-size:16px}
+.report{max-width:880px;margin:32px auto;background:var(--bg);padding:48px 56px;border-radius:14px;box-shadow:var(--shadow)}
+h1{font-size:1.85em;line-height:1.3;margin:.2em 0 .6em;border-bottom:3px solid var(--accent);padding-bottom:.3em}
+h2{font-size:1.35em;margin:1.8em 0 .6em;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:.25em}
+h3{font-size:1.1em;margin:1.4em 0 .4em;color:var(--accent2)}
+p{margin:.7em 0}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+a.wikilink{color:var(--accent2);font-weight:500;border-bottom:1px dotted var(--accent2)}
+a.wikilink:hover{background:var(--soft)}
+.wikilink-dead{color:var(--muted);border-bottom:1px dashed var(--line)}
+blockquote{margin:1em 0;padding:.6em 1em;background:var(--soft);border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:var(--quote-ink)}
+blockquote p{margin:.3em 0}
+table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:600}
+tr:nth-child(even) td{background:var(--row-even)}
+code{background:var(--soft);padding:.1em .4em;border-radius:4px;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+pre{background:var(--pre-bg);color:var(--pre-ink);padding:16px 18px;border-radius:8px;overflow:auto;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+hr{border:none;border-top:1px solid var(--line);margin:1.6em 0}
+strong{color:var(--strong)}
+.genfoot{margin-top:2.4em;padding-top:1em;border-top:1px dashed var(--line);color:var(--muted);font-size:.82em;text-align:center}
+@media(max-width:640px){.report{padding:24px 18px;margin:0;border-radius:0}}
+@media print{:root{--page:#fff;--bg:#fff;--ink:#1f2330;--strong:#15182a;--quote-ink:#33384a;--row-even:#fafbfe;--soft:#f6f7fb;--line:#e4e7ef;--th:#eef0f8}body{background:#fff}.report{box-shadow:none;margin:0;max-width:none}}
+</style></head><body><main class="report"><h1 id="设计样例与测试集">设计样例与测试集</h1>
+<p><strong>项目名称</strong> Math Quiz Multi-Agent（数学试题多智能体仿写系统） <strong>文档版本</strong> v1.0（2026-07-07） <strong>读者对象</strong> 项目组成员、研学指导老师；测试用例部分同时是 Codex 各任务的验收依据 <strong>说明</strong> 第一、二节用真实运行记录展示系统"长什么样"（含一次成功、一次失败）；第三节起是第一阶段的完整测试集。</p>
+<hr />
+<h2 id="一设计样例一次真实的成功运行">一、设计样例（一次真实的成功运行）</h2>
+<p>以下内容取自 <code>/Users/jingj/Downloads/math-quiz-multi-agent/outputs/</code> 目录下的真实落盘文件，未做修饰。这次运行的输入是一道九年级"二次函数图像平移"填空题。</p>
+<p><strong>第 1 步，Decomposer 读题分析</strong>（<code>outputs/decomposer_final.json</code>）：</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;topic&quot;</span><span class="fu">:</span> <span class="st">&quot;二次函数图像的平移&quot;</span><span class="fu">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;subtopics&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;抛物线顶点坐标&quot;</span><span class="ot">,</span> <span class="st">&quot;图像平移规则&quot;</span><span class="ot">,</span> <span class="st">&quot;平移规律：左加右减，上加下减&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;grade_level&quot;</span><span class="fu">:</span> <span class="st">&quot;九年级&quot;</span><span class="fu">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;question_types&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;填空题&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;format_structure&quot;</span><span class="fu">:</span> <span class="st">&quot;单一题目，无背景说明&quot;</span><span class="fu">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;difficulty_distribution&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;easy&quot;</span><span class="fu">:</span> <span class="dv">0</span><span class="fu">,</span> <span class="dt">&quot;medium&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span> <span class="dt">&quot;hard&quot;</span><span class="fu">:</span> <span class="dv">0</span> <span class="fu">},</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;style_features&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;直接考查平移规则&quot;</span><span class="ot">,</span> <span class="st">&quot;顶点坐标计算&quot;</span><span class="ot">,</span> <span class="st">&quot;无背景，直接运算&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;latex_usage&quot;</span><span class="fu">:</span> <span class="st">&quot;题目中使用LaTeX格式表示函数&quot;</span><span class="fu">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;generation_constraints&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;平移方向与距离明确&quot;</span><span class="ot">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;结果需为新抛物线的顶点坐标&quot;</span><span class="ot">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;答案形式为坐标，如(1,-1)&quot;</span><span class="ot">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;新函数解析式或顶点坐标形式&quot;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;uncertain_points&quot;</span><span class="fu">:</span> <span class="ot">[]</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>第 2 步，Reviewer 审核分析</strong>（<code>outputs/reviewer_final.json</code>）。审核给出 95 分、判定有效，同时挑出一处小毛病：</p>
+<blockquote>
+<p>"generation_constraints 中最后一项'新函数解析式或顶点坐标形式'表述不够精确，因为题目明确要求顶点坐标。"</p>
+</blockquote>
+<p>95 分超过合格线 90，流水线放行。分数低于 90 时这里会打回 Decomposer 重做，Reviewer 的意见清单就是重做的依据。</p>
+<p><strong>第 3 步，Generator 仿写新题</strong>（<code>outputs/generated_questions_final.md</code>）：</p>
+<blockquote>
+<ol type="1">
+<li>把抛物线 y = x^2 - 3 向左平移 2 个单位，再向上平移 4 个单位，得到抛物线的顶点坐标为_____.</li>
+</ol>
+</blockquote>
+<p><strong>第 4 步，答案独立成页</strong>（<code>outputs/answer_key_final.md</code>）：</p>
+<blockquote>
+<ol type="1">
+<li>(-2, 1)</li>
+</ol>
+</blockquote>
+<p><strong>第 5 步，QC 质检</strong>（<code>outputs/qc_final.json</code>）：95 分通过，结论"题目与答案均正确，知识点、难度和风格与原题一致"。</p>
+<p>五步全程共产生 14 个落盘文件（各轮 round 文件加 final 文件）。人工验算：y = x² − 3 顶点 (0, −3)，左移 2、上移 4 后顶点 (−2, 1)，答案正确。</p>
+<p>第一阶段完成后，同样这次运行在用户眼里会多出三样东西：网页上印刷体的公式渲染（而非上面的裸文本）、Generator 换用推理模型后附带的解题步骤、以及界面时间线上可视的五步进度。</p>
+<h2 id="二失败样例历史故障与由此而来的两条设计">二、失败样例（历史故障与由此而来的两条设计）</h2>
+<p>真实故障记录：对复杂题（含参分式不等式）运行时，Reviewer 在输出 JSON 的字符串里直接嵌了未转义的英文双引号：</p>
+<pre class="text"><code>&quot;minor_issues&quot;: [
+    &quot;题型&quot;解不等式&quot;过于宽泛，应更具体为&quot;含参数分式不等式求解&quot;&quot;,
+    ...
+]
+json.decoder.JSONDecodeError: Expecting &#39;,&#39; delimiter: line 6 column 9 (char 87)
+RuntimeError: 模型没有返回合法 JSON</code></pre>
+<p>整条流水线在此崩溃。排查依据 debug 落盘文件定位到故障节点是 Reviewer 的输出解析（并非 API 请求失败，也非 Decomposer 写文件失败）。由此产生两条至今有效的设计：</p>
+<ol type="1">
+<li>提示词约束。所有智能体的提示词禁止在字符串里使用英文双引号，引用概念改用中文引号或书名号；</li>
+<li>程序兜底。common.py 在 JSON 解析失败时自动落盘原始输出并调用修复流程重试，多次失败才报错。</li>
+</ol>
+<p>这个案例说明"大模型的输出必须当作不可信输入处理"，也是测试集里 T-JSON-01 和 T-INP-03 两个用例的由来。</p>
+<h2 id="三测试集设计原则">三、测试集设计原则</h2>
+<ol type="1">
+<li><strong>每个接口至少一条用例。</strong> 接口清单：视觉输入适配、Decomposer 首轮与重做、Reviewer、Generator 首轮与重做、QC、闭环控制（轮次上限、Token 限额）、JSON 修复、schema 校验、程序把关规则、渲染、Web 服务与专家模式、密钥安全。</li>
+<li><strong>历史故障必须变成回归用例。</strong> 曾经翻过车的含参分式不等式永久保留在测试集里，每个里程碑跑一遍。</li>
+<li><strong>判定方式优先程序化。</strong> 能写断言的（文件存在、字段类型、数量相等）用程序判；只能人看的（答案对不对、公式漂不漂亮）明确写"人工"并给核对要点。</li>
+<li><strong>打回路径要能人为触发。</strong> 用"故意做坏的输入"测试打回机制，而非祈祷模型恰好出错。</li>
+</ol>
+<h2 id="四测试用例总表">四、测试用例总表</h2>
+<p>规模：17 条。P0 为第一阶段验收必过项（13 条），P1 允许最多 2 条带书面说明延后。</p>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>覆盖接口</th>
+<th>输入</th>
+<th>期望行为</th>
+<th>判定</th>
+<th>级别</th>
+<th>里程碑</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T-INP-01</td>
+<td>全流程（文本入口）</td>
+<td>TB-01 一元一次方程</td>
+<td>全流程通过，QC≥90，答案 x=3</td>
+<td>程序+人工</td>
+<td>P0</td>
+<td>M2</td>
+</tr>
+<tr>
+<td>T-INP-02</td>
+<td>全流程回归</td>
+<td>TB-02 抛物线平移</td>
+<td>与第一节样例同水平的产出</td>
+<td>程序+人工</td>
+<td>P0</td>
+<td>M2</td>
+</tr>
+<tr>
+<td>T-INP-03</td>
+<td>复杂题回归</td>
+<td>TB-03 含参分式不等式</td>
+<td>不崩溃；分析含分类讨论；解答按 m 的取值分类且正确</td>
+<td>人工</td>
+<td>P0</td>
+<td>M2</td>
+</tr>
+<tr>
+<td>T-INP-04</td>
+<td>多行公式</td>
+<td>TB-04 二元一次方程组</td>
+<td>方程组大括号渲染正确，新题同型</td>
+<td>人工</td>
+<td>P1</td>
+<td>M4</td>
+</tr>
+<tr>
+<td>T-INP-05</td>
+<td>图形题边界</td>
+<td>TB-05 带图几何题</td>
+<td>has_figure 判真，界面友好拒绝，不进流水线</td>
+<td>程序</td>
+<td>P0</td>
+<td>M3/M5</td>
+</tr>
+<tr>
+<td>T-OCR-01</td>
+<td>视觉输入</td>
+<td>清晰打印体题目照片</td>
+<td>识别文本与原题一致，LaTeX 可渲染</td>
+<td>人工</td>
+<td>P0</td>
+<td>M3</td>
+</tr>
+<tr>
+<td>T-OCR-02</td>
+<td>视觉输入边界</td>
+<td>歪斜、暗光照片</td>
+<td>confidence 低于阈值，提示重拍，不进流水线</td>
+<td>程序</td>
+<td>P1</td>
+<td>M3</td>
+</tr>
+<tr>
+<td>T-DEC-01</td>
+<td>schema 校验</td>
+<td>任一正常运行</td>
+<td>Decomposer 输出经 validators.py 全字段校验通过</td>
+<td>程序</td>
+<td>P0</td>
+<td>M1</td>
+</tr>
+<tr>
+<td>T-REV-01</td>
+<td>打回路径（闭环一）</td>
+<td>TB-06 故意做坏的分析</td>
+<td>判不合格，Decomposer 重做被触发，round1 文件生成</td>
+<td>程序</td>
+<td>P0</td>
+<td>M1</td>
+</tr>
+<tr>
+<td>T-GEN-01</td>
+<td>程序把关</td>
+<td>人为删去一条答案</td>
+<td>题目数与答案数不等被程序拦截，打回 Generator</td>
+<td>程序</td>
+<td>P0</td>
+<td>M1</td>
+</tr>
+<tr>
+<td>T-QC-01</td>
+<td>打回路径（闭环二）</td>
+<td>TB-07 故意错误答案</td>
+<td>is_passed=false，revision_instructions 非空，重做触发</td>
+<td>程序</td>
+<td>P0</td>
+<td>M1</td>
+</tr>
+<tr>
+<td>T-LOOP-01</td>
+<td>轮次上限</td>
+<td>合格线临时调为 101 分</td>
+<td>到达最大打回次数后仍输出 final 文件并正常终止</td>
+<td>程序</td>
+<td>P0</td>
+<td>M1</td>
+</tr>
+<tr>
+<td>T-LOOP-02</td>
+<td>Token 限额</td>
+<td>限额临时调为极小值</td>
+<td>流水线中止，已完成 round 文件保留，报错信息明确</td>
+<td>程序</td>
+<td>P0</td>
+<td>M1</td>
+</tr>
+<tr>
+<td>T-JSON-01</td>
+<td>JSON 修复</td>
+<td>TB-08 非法 JSON 样本</td>
+<td>修复后解析成功；修复前原文已落盘 debug</td>
+<td>程序</td>
+<td>P0</td>
+<td>M1</td>
+</tr>
+<tr>
+<td>T-UI-01</td>
+<td>专家模式</td>
+<td>开启开关，中途修改考点</td>
+<td>流水线停在待确认；修改后的分析被闭环二实际采用</td>
+<td>程序+人工</td>
+<td>P0</td>
+<td>M5</td>
+</tr>
+<tr>
+<td>T-UI-02</td>
+<td>渲染</td>
+<td>渲染核对清单（见第六节）</td>
+<td>分式、根号、绝对值、不等号、方程组各渲染正确</td>
+<td>人工</td>
+<td>P0</td>
+<td>M4</td>
+</tr>
+<tr>
+<td>T-SEC-01</td>
+<td>密钥安全</td>
+<td>全量扫描</td>
+<td>API 密钥不出现在页面、日志、API 响应中；.gitignore 含 .env</td>
+<td>程序</td>
+<td>P0</td>
+<td>M1</td>
+</tr>
+</tbody>
+</table>
+<h2 id="五测试输入材料tb-系列">五、测试输入材料（TB 系列）</h2>
+<p>以下材料在 M1 时由 Codex 建立为文件，路径 <code>/Users/jingj/Downloads/math-quiz-multi-agent/examples/tests/TB-01.md</code> 至 <code>TB-08.json</code>。此处为权威原文，建文件时照抄。</p>
+<p><strong>TB-01 一元一次方程（简单题基线）</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># 数学练习</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>解方程：$3x + 7 = 22 - 2x$</span></code></pre></div>
+<p>预期答案 x = 3，用于全流程冒烟测试。</p>
+<p><strong>TB-02 抛物线平移（成功样例回归）</strong></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># 数学练习</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>把抛物线 $y = (x+1)^2 - 2$ 向右平移 3 个单位，再向下平移 1 个单位，</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>   所得抛物线的顶点坐标为_____.</span></code></pre></div>
+<p>预期答案 (2, −3)。</p>
+<p><strong>TB-03 含参分式不等式（历史故障回归，权威用例）</strong></p>
+<p>即当前 <code>/Users/jingj/Downloads/math-quiz-multi-agent/examples/input.md</code> 的内容：</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># 数学练习</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>(mx^2 - 2x + mx - 2) / (x + 3) &gt; 0</span></code></pre></div>
+<p>核对要点：分子可因式分解为 (x+1)(mx−2)；解答必须按 m = 0、m &gt; 0、m &lt; 0 分类，m &lt; 0 时还需比较根 2/m 与 −1、−3 的相对位置。分析阶段应识别出"分类讨论"与"分母零点"两个要素（历史版本正是在这道题上触发了 Reviewer 非法 JSON 崩溃）。</p>
+<p><strong>TB-04 二元一次方程组（多行公式渲染）</strong></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># 数学练习</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>解方程组：</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>   $$\begin{cases} 2x + 3y = 7 <span class="sc">\\</span> 3x - y = 5 \end{cases}$$</span></code></pre></div>
+<p>预期答案 x = 2、y = 1。</p>
+<p><strong>TB-05 带图几何题（边界用例，期望被拒绝）</strong></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># 数学练习</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>如图，在 △ABC 中，D、E 分别是 AB、AC 的中点。</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>   求证：DE ∥ BC，且 DE = ½ BC。（附图）</span></code></pre></div>
+<p>期望行为是识别出图形依赖并友好拒绝，凡"系统硬做本题"均判失败。</p>
+<p><strong>TB-06 故意做坏的分析 JSON（测 Reviewer 打回）</strong></p>
+<p>对 TB-03 伪造一份错误分析，直接作为 Reviewer 输入：</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;topic&quot;</span><span class="fu">:</span> <span class="st">&quot;二次函数图像的平移&quot;</span><span class="fu">,</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;subtopics&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;顶点坐标&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;grade_level&quot;</span><span class="fu">:</span> <span class="st">&quot;七年级&quot;</span><span class="fu">,</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;question_types&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;填空题&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;format_structure&quot;</span><span class="fu">:</span> <span class="st">&quot;单一题目&quot;</span><span class="fu">,</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;difficulty_distribution&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;easy&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span> <span class="dt">&quot;medium&quot;</span><span class="fu">:</span> <span class="dv">0</span><span class="fu">,</span> <span class="dt">&quot;hard&quot;</span><span class="fu">:</span> <span class="dv">0</span> <span class="fu">},</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;style_features&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;直接运算&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;latex_usage&quot;</span><span class="fu">:</span> <span class="st">&quot;无&quot;</span><span class="fu">,</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;generation_constraints&quot;</span><span class="fu">:</span> <span class="ot">[]</span><span class="fu">,</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;uncertain_points&quot;</span><span class="fu">:</span> <span class="ot">[]</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>考点、年级、难度全错，Reviewer 判其合格即测试失败。</p>
+<p><strong>TB-07 故意错误答案（测 QC 打回）</strong></p>
+<p>对 TB-01 伪造答案页 <code>answer_key</code> 内容为 <code>1. x = 5</code>（正确为 x = 3），QC 判其通过即测试失败。</p>
+<p><strong>TB-08 非法 JSON 样本（测修复机制，复刻历史故障）</strong></p>
+<pre class="text"><code>{
+  &quot;is_valid&quot;: true,
+  &quot;score&quot;: 85,
+  &quot;minor_issues&quot;: [
+    &quot;题型&quot;解不等式&quot;过于宽泛，应更具体为&quot;含参数分式不等式求解&quot;&quot;
+  ]
+}</code></pre>
+<p><strong>照片用例采集说明（T-OCR-01 / T-OCR-02）</strong>。正式照片两张，由项目组自拍：一张为打印体代数题、光线均匀、正对拍摄；一张为同一道题故意倾斜 30 度加弱光。存放路径 <code>/Users/jingj/Downloads/math-quiz-multi-agent/examples/tests/photo_clear.jpg</code> 与 <code>photo_bad.jpg</code>。</p>
+<h2 id="六渲染核对清单t-ui-02-用">六、渲染核对清单（T-UI-02 用）</h2>
+<p>人工目验，每项在浏览器中与教科书印刷体对照：</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>样例 LaTeX</th>
+<th>核对要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>分式</td>
+<td><code>\dfrac{x+1}{x-2}</code></td>
+<td>分数线水平居中，上下不挤</td>
+</tr>
+<tr>
+<td>根号</td>
+<td><code>\sqrt{2x+3}</code></td>
+<td>根号完整罩住内容</td>
+</tr>
+<tr>
+<td>绝对值</td>
+<td><code>\lvert x-1 \rvert</code></td>
+<td>竖线高度与内容匹配</td>
+</tr>
+<tr>
+<td>不等号</td>
+<td><code>\geq, \leq, \neq</code></td>
+<td>显示为 ≥ ≤ ≠ 而非源码</td>
+</tr>
+<tr>
+<td>方程组</td>
+<td><code>\begin{cases}...\end{cases}</code></td>
+<td>左大括号罩住全部方程</td>
+</tr>
+<tr>
+<td>上下标</td>
+<td><code>x^2, a_1</code></td>
+<td>位置与字号正确</td>
+</tr>
+<tr>
+<td>容错</td>
+<td>一条故意不配对的括号</td>
+<td>降级显示原文并标黄，页面不崩</td>
+</tr>
+</tbody>
+</table>
+<h2 id="七验收口径">七、验收口径</h2>
+<ul>
+<li>第一阶段收官（M6）判定条件：P0 用例 13 条全部通过；P1 用例至多 2 条延后且附书面原因与计划。</li>
+<li>每个里程碑只跑本里程碑及此前所有里程碑的用例（累积回归）。</li>
+<li>用例结果记录在 <code>/Users/jingj/Downloads/math-quiz-multi-agent/coord/test_log.md</code>，一行一次执行，含日期、用例号、结果、备注，由执行任务的 Codex 随任务交付一并更新。</li>
+<li>跑分脚本（自动执行程序判定类用例并汇总成表）作为 T01 的一部分由 Codex 实现。</li>
+</ul>
+<footer class="genfoot">本 HTML 报告由同名 Markdown 自动生成 · Ogion · 2026-07-07</footer></main></body></html>

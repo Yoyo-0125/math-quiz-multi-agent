@@ -1,0 +1,462 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>02_设计方案</title><style>
+:root{color-scheme:light dark;
+  --ink:#1f2330;--muted:#6b7280;--bg:#fff;--soft:#f6f7fb;--accent:#3b4cca;--accent2:#7b3fb3;
+  --line:#e4e7ef;--th:#eef0f8;--page:#eef0f5;--shadow:0 6px 30px rgba(30,40,80,.08);
+  --quote-ink:#33384a;--row-even:#fafbfe;--strong:#15182a;--pre-bg:#1f2330;--pre-ink:#e8eaf2}
+@media(prefers-color-scheme:dark){:root{
+  --ink:#dfe3ee;--muted:#9aa3b5;--bg:#1a1d27;--soft:#232733;--accent:#8f9bff;--accent2:#c99be6;
+  --line:#333846;--th:#262b39;--page:#111219;--shadow:0 8px 30px rgba(0,0,0,.5);
+  --quote-ink:#c4cad9;--row-even:#20242f;--strong:#f0f2f8;--pre-bg:#0f1117;--pre-ink:#e8eaf2}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:-apple-system,"PingFang SC","Segoe UI",Roboto,"Helvetica Neue",Arial,"Microsoft YaHei",sans-serif;line-height:1.75;font-size:16px}
+.report{max-width:880px;margin:32px auto;background:var(--bg);padding:48px 56px;border-radius:14px;box-shadow:var(--shadow)}
+h1{font-size:1.85em;line-height:1.3;margin:.2em 0 .6em;border-bottom:3px solid var(--accent);padding-bottom:.3em}
+h2{font-size:1.35em;margin:1.8em 0 .6em;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:.25em}
+h3{font-size:1.1em;margin:1.4em 0 .4em;color:var(--accent2)}
+p{margin:.7em 0}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+a.wikilink{color:var(--accent2);font-weight:500;border-bottom:1px dotted var(--accent2)}
+a.wikilink:hover{background:var(--soft)}
+.wikilink-dead{color:var(--muted);border-bottom:1px dashed var(--line)}
+blockquote{margin:1em 0;padding:.6em 1em;background:var(--soft);border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:var(--quote-ink)}
+blockquote p{margin:.3em 0}
+table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:600}
+tr:nth-child(even) td{background:var(--row-even)}
+code{background:var(--soft);padding:.1em .4em;border-radius:4px;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.88em}
+pre{background:var(--pre-bg);color:var(--pre-ink);padding:16px 18px;border-radius:8px;overflow:auto;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+ul,ol{padding-left:1.5em}
+li{margin:.25em 0}
+hr{border:none;border-top:1px solid var(--line);margin:1.6em 0}
+strong{color:var(--strong)}
+.genfoot{margin-top:2.4em;padding-top:1em;border-top:1px dashed var(--line);color:var(--muted);font-size:.82em;text-align:center}
+@media(max-width:640px){.report{padding:24px 18px;margin:0;border-radius:0}}
+@media print{:root{--page:#fff;--bg:#fff;--ink:#1f2330;--strong:#15182a;--quote-ink:#33384a;--row-even:#fafbfe;--soft:#f6f7fb;--line:#e4e7ef;--th:#eef0f8}body{background:#fff}.report{box-shadow:none;margin:0;max-width:none}}
+</style></head><body><main class="report"><h1 id="设计方案">设计方案</h1>
+<p><strong>项目名称</strong> Math Quiz Multi-Agent（数学试题多智能体仿写系统） <strong>文档版本</strong> v1.0（2026-07-07） <strong>读者对象</strong> 项目组成员、研学指导老师；同时作为后续开发（Codex 执行）的依据 <strong>上游文档</strong> 01 号产品规格介绍书（定义"做什么"，本文档回答"怎么做"）</p>
+<hr />
+<h2 id="一设计目标与约束">一、设计目标与约束</h2>
+<h3 id="11-已有资产">1.1 已有资产</h3>
+<p>项目已有一版可运行的命令行程序，位于 <code>/Users/jingj/Downloads/math-quiz-multi-agent/</code>（原始开发环境为 Windows），包含：</p>
+<ul>
+<li>四个智能体程序（decomposer / reviewer / generator / qc 各一个 Python 文件，合计约 1100 行）；</li>
+<li>总控 run_pipeline.py，实现了两道"审核不合格就打回"的闭环，每道闭环最多打回 2 次；</li>
+<li>common.py 公共库，实现了 .env 读取、DeepSeek API 调用、调试输出落盘，以及非法 JSON 的自动修复（历史上 Reviewer 曾输出内嵌未转义引号的坏 JSON 导致整条流水线崩溃，这个修复补丁是现版本唯一打过的补丁）；</li>
+<li>一次完整的成功运行记录（outputs 目录下的 round 与 final 文件，QC 评分 95 分通过）。</li>
+</ul>
+<p>设计原则是在这套已验证可行的骨架上做加法，四个智能体的职责边界和文件接口保持不变。</p>
+<h3 id="12-硬约束">1.2 硬约束</h3>
+<table>
+<thead>
+<tr>
+<th>约束</th>
+<th>内容</th>
+<th>由来</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>零第三方依赖</td>
+<td>只用 Python 标准库，不 pip install 任何包</td>
+<td>开发机 pip 走代理报错，装包不可靠</td>
+</tr>
+<tr>
+<td>运行平台</td>
+<td>Windows 笔记本（i5-8265U / 24GB 内存 / 集成显卡）</td>
+<td>用户现有设备</td>
+</tr>
+<tr>
+<td>大模型服务</td>
+<td>DeepSeek API（文本），另有一个已开通的视觉大模型 API（拍照识别用）</td>
+<td>已有账号</td>
+</tr>
+<tr>
+<td>本地不跑模型</td>
+<td>一切模型推理都在云端</td>
+<td>集成显卡与低压 CPU 不具备本地推理条件</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-设备条件对方案的影响">1.3 设备条件对方案的影响</h3>
+<p>i5-8265U 是 15 瓦低压四核处理器，128MB 显存说明只有集成显卡。这个配置排除了两类方案：本地部署任何开源模型（含本地 OCR 大模型），以及任何依赖 GPU 的图像处理。但它完全胜任另一类工作：发 HTTP 请求、读写文件、让浏览器渲染网页。所以总体思路定为<strong>本机只做调度与展示，计算全部外包给云端 API</strong>。这既是无奈，也刚好是多智能体架构的自然形态。</p>
+<h2 id="二总体架构">二、总体架构</h2>
+<pre class="text"><code>┌─────────────────────────────────────────────────────────┐
+│  展示层   浏览器单页应用（KaTeX 公式渲染、流程可视化）      │
+├─────────────────────────────────────────────────────────┤
+│  服务层   server.py  标准库 http.server                   │
+│           路由：提交任务 / 查询进度 / 专家确认 / 取结果     │
+│           任务状态机 + 后台线程驱动流水线                  │
+├─────────────────────────────────────────────────────────┤
+│  编排层   run_pipeline.py（现有，双闭环打回逻辑）           │
+├─────────────────────────────────────────────────────────┤
+│  智能体层  Decomposer │ Reviewer │ Generator │ QC          │
+│           （现有四件套，接口不变）                          │
+│  输入适配  vision_input.py（新增，照片 → 题目文本）         │
+├─────────────────────────────────────────────────────────┤
+│  公共层   common.py（API 调用 / JSON 修复 / 调试落盘）      │
+│           validators.py（新增，schema 校验）               │
+│           budget.py（新增，Token 台账与限额）              │
+├─────────────────────────────────────────────────────────┤
+│  云端服务  DeepSeek chat / DeepSeek reasoner / 视觉大模型   │
+└─────────────────────────────────────────────────────────┘</code></pre>
+<p>数据一律落盘为文件（JSON 与 Markdown），沿用现有 outputs 目录约定，每一轮打回都留档。这让任何一次运行都可复盘，也让测试可以直接对文件断言。</p>
+<h2 id="三关键选型与理由">三、关键选型与理由</h2>
+<h3 id="31-界面路线决策记录">3.1 界面路线（决策记录）</h3>
+<p>三个候选的对比：</p>
+<table>
+<thead>
+<tr>
+<th>候选</th>
+<th>优点</th>
+<th>缺点</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A. 标准库 Web 服务 + 单页 HTML + 本地 KaTeX</td>
+<td>零依赖，界面自由度最高，效果上限高</td>
+<td>需要自己写路由和前端</td>
+<td><strong>采用</strong></td>
+</tr>
+<tr>
+<td>B. Streamlit</td>
+<td>写得快</td>
+<td>必须过 pip 这一关；页面是模板脸，观感撞车</td>
+<td>放弃</td>
+</tr>
+<tr>
+<td>C. 只输出静态 HTML 报告</td>
+<td>最省事</td>
+<td>没有交互，拍照上传、专家模式都无处安放</td>
+<td>作为 F10 导出功能保留</td>
+</tr>
+</tbody>
+</table>
+<p>选 A 的核心理由有三个。其一，pip 在开发机上不可靠是既成事实，方案 A 是唯一完全绕开它的路线。其二，产品要求"得体、有质感"的界面，自己写的 HTML/CSS 可以完全控制观感，Streamlit 反而受限。其三，这台机器跑浏览器绰绰有余，KaTeX 渲染发生在浏览器里，服务端毫无压力。</p>
+<p>KaTeX 本身不装包：官网发布的是一组静态文件（js、css、字体，合计约 3MB），下载后放进项目 <code>static/</code> 目录，网页本地引用即可，离线可用。</p>
+<h3 id="32-模型分工成本与准确率的平衡">3.2 模型分工（成本与准确率的平衡）</h3>
+<p>现版本所有智能体都用 deepseek-chat。第一阶段改为按任务性质分配两种模型：</p>
+<table>
+<thead>
+<tr>
+<th>智能体</th>
+<th>任务性质</th>
+<th>模型</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Decomposer</td>
+<td>阅读理解、信息抽取</td>
+<td>deepseek-chat</td>
+<td>不需要深度推理，chat 便宜且快</td>
+</tr>
+<tr>
+<td>Reviewer</td>
+<td>核对分析是否准确</td>
+<td>deepseek-chat</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>Generator</td>
+<td>出题并<strong>解题</strong></td>
+<td>deepseek-reasoner</td>
+<td>解题是纯数学推理，reasoner 数学能力显著更强</td>
+</tr>
+<tr>
+<td>QC</td>
+<td>独立<strong>重解</strong>并验答案</td>
+<td>deepseek-reasoner</td>
+<td>验算和解题同性质，弱模型验不出强错误</td>
+</tr>
+</tbody>
+</table>
+<p>这是针对"Token 花了答案还不对"这一核心困境的第一刀：把贵而强的推理模型只用在真正需要推理的两个环节。deepseek-reasoner 与 deepseek-chat 同属一个 API，只改请求里的模型名即可切换，注意 reasoner 不支持 <code>response_format</code> 强制 JSON 参数，需要靠提示词约束加上现有的 JSON 修复机制兜底。模型名写进 <code>.env</code> 配置而非写死在代码里，方便日后换更强的模型做对照实验。</p>
+<p>程序侧再加两道不花 Token 的把关（详见 4.4）：题号数量核对、schema 校验。能用程序判断对错的事，都从大模型手里拿走。</p>
+<h3 id="33-拍照录入视觉输入适配层">3.3 拍照录入（视觉输入适配层）</h3>
+<p>新增 vision_input.py，职责单一：把一张照片变成一段可进流水线的题目文本。</p>
+<ul>
+<li>接口约定。输入为图片文件；输出为固定结构的 JSON：</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;text_markdown&quot;</span><span class="fu">:</span> <span class="st">&quot;识别出的题目全文，数学公式用 LaTeX 表示&quot;</span><span class="fu">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;has_figure&quot;</span><span class="fu">:</span> <span class="kw">false</span><span class="fu">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;confidence&quot;</span><span class="fu">:</span> <span class="fl">0.95</span><span class="fu">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;warnings&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;图片略有倾斜，已按内容纠正阅读顺序&quot;</span><span class="ot">]</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li>实现方式。视觉大模型 API 走 OpenAI 兼容格式：图片读入后 base64 编码，放进消息体一起 POST，标准库 urllib 即可完成，与 common.py 现有调用方式同构。API 地址、密钥、模型名全部放 <code>.env</code>（<code>VISION_API_BASE</code> / <code>VISION_API_KEY</code> / <code>VISION_MODEL</code>），换供应商不改代码。</li>
+<li>分流规则。<code>has_figure</code> 为真（题目依赖几何图或坐标系图）时，界面提示"当前版本暂不支持带图题目"，任务终止；<code>confidence</code> 低于阈值时提示用户重拍。这两条边界行为都有对应测试用例。</li>
+</ul>
+<h3 id="34-公式渲染">3.4 公式渲染</h3>
+<ul>
+<li>选 KaTeX 而非 MathJax：两者都能把 LaTeX 渲染成印刷体公式，KaTeX 体积更小、渲染更快，覆盖的语法范围对中学数学绰绰有余。</li>
+<li>渲染发生在三处：原题识别结果、解答步骤、新题与答案。三处共用同一个渲染函数。</li>
+<li>大模型输出的 LaTeX 偶有小错（如括号不配对），渲染层开启 KaTeX 的容错模式，渲染失败的公式降级显示原文并标黄提醒，而非整页报错。</li>
+</ul>
+<h2 id="四模块设计">四、模块设计</h2>
+<h3 id="41-保持不变的部分">4.1 保持不变的部分</h3>
+<p>四个智能体的系统提示词结构、输入输出 JSON schema、outputs 目录的 round/final 文件命名，全部沿用现状。run_pipeline.py 的双闭环判定逻辑（合格分数阈值 90、最多打回 2 次）也不动，只做两处扩展：接受"从内存对象而非固定路径读输入"的参数化改造，以及在闭环节点上报进度事件。</p>
+<h3 id="42-新增模块">4.2 新增模块</h3>
+<p><strong>server.py（服务层）。</strong> 标准库 <code>http.server</code> + <code>threading</code>。路由表：</p>
+<table>
+<thead>
+<tr>
+<th>方法与路径</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET <code>/</code></td>
+<td>返回单页应用 index.html</td>
+</tr>
+<tr>
+<td>GET <code>/static/...</code></td>
+<td>KaTeX 等静态资源</td>
+</tr>
+<tr>
+<td>POST <code>/api/job</code></td>
+<td>提交任务（照片 base64 或题目文本），返回 job_id</td>
+</tr>
+<tr>
+<td>GET <code>/api/job/{id}/status</code></td>
+<td>查询进度（前端每 2 秒轮询一次）</td>
+</tr>
+<tr>
+<td>POST <code>/api/job/{id}/confirm</code></td>
+<td>专家模式下提交人工修改后的分析，流水线继续</td>
+</tr>
+<tr>
+<td>GET <code>/api/job/{id}/result</code></td>
+<td>取最终结果</td>
+</tr>
+</tbody>
+</table>
+<p>任务状态机：<code>queued → vision → decompose → review → (await_confirm) → generate → qc → done / failed / rejected_figure</code>。每个任务在 <code>outputs/jobs/{job_id}/</code> 下有独立目录，流水线在后台线程中执行，HTTP 层永不阻塞。</p>
+<p><strong>validators.py（schema 校验）。</strong> 手写校验函数（零依赖），对四个智能体的输出逐字段查类型、查取值范围（如 score 必须是 0 到 100 的整数）。校验失败视同"输出不合格"，走既有的打回或修复路径。这补上了现状里"全靠提示词约束"的缺口。</p>
+<p><strong>budget.py（Token 台账）。</strong> DeepSeek 每次响应都带用量字段，台账逐次累加、按智能体分项记录，写入任务目录。超过单任务限额（默认 20 万 Token，可配）时中止流水线，保留已完成的 round 文件并明确报错。界面上的 Token 计量条也由它供数。</p>
+<p><strong>render_report.py（报告导出）。</strong> 把最终结果拼装成自包含 HTML（内嵌 KaTeX 资源），对应功能 F10，可打印、可留存、可脱网打开。</p>
+<h3 id="43-专家模式">4.3 专家模式</h3>
+<p>产品规格里的 F9，回应"有些信息想手动调，但用户端做不到"的历史问题。设计为一个提交任务时的开关：</p>
+<ul>
+<li>关（默认）：流水线一跑到底，全自动。</li>
+<li>开：闭环一定稿后，状态停在 <code>await_confirm</code>，界面把考点、难度、题型、出题约束展示为可编辑表单；用户改完提交，流水线以<strong>修改后的分析</strong>为准继续走闭环二。改动会记录进任务目录，供复盘对比"人工修正了什么"。</li>
+</ul>
+<p>这个设计顺带成为答辩时的互动亮点：现场请观众改一个考点，看新题跟着变。</p>
+<h3 id="44-稳定性设计">4.4 稳定性设计</h3>
+<p>按"错误要能定位、流程要能兜底"两条要求组织：</p>
+<ol type="1">
+<li>JSON 修复。沿用现有机制（原始输出先落盘 debug、loads 失败自动调用修复提示词重试），所有调用都带 agent_name，坏输出能定位到具体智能体。</li>
+<li>schema 校验。见 validators.py，防"合法 JSON 但字段错"这类修复机制管不到的问题。</li>
+<li>程序规则把关。题目数量与答案数量必须相等、题号必须一一对应、LaTeX 定界符必须配对，这三条用纯程序检查，不合格直接打回 Generator，不消耗 QC 的 Token。</li>
+<li>轮次与限额双保险。打回次数封顶（现有）+ Token 限额（新增），保证流水线在任何情况下都会停。</li>
+<li>全程落盘。每轮中间产物、每次原始输出、每笔 Token 用量都有文件，出问题看 <code>outputs/</code> 而非猜。</li>
+<li>Windows 编码防线。所有文件读写显式 <code>encoding="utf-8"</code>（现有代码已做到），服务端响应头显式 UTF-8，控制台输出避免依赖系统默认编码（Windows 中文环境默认 GBK，是历史上大量"乱码玄学"的来源）。</li>
+</ol>
+<h2 id="五界面设计">五、界面设计</h2>
+<p>观感目标一句话：像一份印刷得讲究的数学讲义，配上克制的现代工程感。得体，不花哨。</p>
+<p><strong>布局。</strong> 单页三区：</p>
+<pre class="text"><code>┌────────────────────────────────────────────────────┐
+│  顶栏  项目名 · 专家模式开关 · Token 计量条           │
+├──────────────┬─────────────────────────────────────┤
+│  输入区       │   流水线时间线                        │
+│  拍照/选图    │   ○ 识别 → ○ 分析 → ○ 审核           │
+│  或粘贴文本   │   → ○ 出题 → ○ 质检                  │
+│  [开始]      │   （当前环节高亮，打回时显示轮次徽标）  │
+├──────────────┴─────────────────────────────────────┤
+│  结果区（标签页）                                     │
+│  原题识别 │ 考点分析 │ 解答 │ 新题 │ 新题答案 │ QC报告 │
+└────────────────────────────────────────────────────┘</code></pre>
+<p><strong>视觉方向。</strong> 浅色纸感底、深藏蓝主色、琥珀色点缀作强调；题目与答案用卡片承载，投影环境下保持高对比；中文用系统自带的苹方/微软雅黑字体栈，公式一律 KaTeX，杜绝截图贴公式。具体色值和间距在实现任务书中给出，允许实现时微调。</p>
+<p><strong>关键交互。</strong> 长耗时环节（reasoner 解题可达数分钟）必须有进度反馈：时间线节点做呼吸动画、显示已用时与已耗 Token。打回发生时，时间线上出现"第 2 轮"徽标并可点开查看打回原因。这些细节是"质感"的主要来源，也是向评委展示闭环机制的可视化窗口。</p>
+<h2 id="六成本与耗时估算">六、成本与耗时估算</h2>
+<p>单题全流程的量级测算（以现有运行记录外推，含一次打回的余量）：</p>
+<table>
+<thead>
+<tr>
+<th>环节</th>
+<th>模型</th>
+<th>估算 Token（输入+输出）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>视觉识别</td>
+<td>视觉大模型</td>
+<td>2 千左右</td>
+</tr>
+<tr>
+<td>分析 + 审核（闭环一，含打回）</td>
+<td>chat</td>
+<td>1 万左右</td>
+</tr>
+<tr>
+<td>出题解题 + 质检（闭环二，含打回）</td>
+<td>reasoner（含思维链）</td>
+<td>3 万至 6 万</td>
+</tr>
+<tr>
+<td>合计</td>
+<td></td>
+<td>4 万至 8 万</td>
+</tr>
+</tbody>
+</table>
+<p>按 DeepSeek 现行牌价折算，单题成本在几分到几毛钱人民币的量级（reasoner 输出计费高于 chat，是大头）。精确单价随官方调价浮动，此处不写死数字，实施时以官网牌价核算，这项核实工作已列入 GPT 的调研任务（见 03 号文档 T07）。一次课堂演示按 10 道题计，预算控制在几元以内，可接受。</p>
+<p>耗时方面：chat 环节每次调用数秒到半分钟；reasoner 解一道中学难题约 1 到 5 分钟。全流程 2 到 10 分钟，这决定了界面必须异步加进度展示（见第五节），也决定了答辩演示要提前跑一道"热场题"备着。</p>
+<h2 id="七阶段规划">七、阶段规划</h2>
+<p>第一阶段拆成六个里程碑，每个都有可检验的完成标志：</p>
+<table>
+<thead>
+<tr>
+<th>里程碑</th>
+<th>内容</th>
+<th>完成标志（对应 04 号文档测试用例）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M0</td>
+<td>四份文档定稿（本轮）</td>
+<td>文档评审通过</td>
+</tr>
+<tr>
+<td>M1</td>
+<td>稳定性加固：validators.py、budget.py、程序把关规则、闭环参数化</td>
+<td>T-DEC-01 / T-REV-01 / T-GEN-01 / T-QC-01 / T-LOOP-01 / T-LOOP-02 / T-JSON-01 / T-SEC-01 通过</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>模型分工切换：Generator 与 QC 换 reasoner，模型名配置化</td>
+<td>T-INP-01 / T-INP-02 通过，T-INP-03（含参不等式）答案经人工核对正确</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>拍照录入：vision_input.py 及边界分流</td>
+<td>T-OCR-01 / T-OCR-02 / T-INP-05 通过</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>渲染：KaTeX 本地资产、渲染函数、HTML 报告导出</td>
+<td>T-UI-02 渲染清单通过，T-INP-04 方程组显示正确</td>
+</tr>
+<tr>
+<td>M5</td>
+<td>Web 界面：server.py、单页应用、专家模式</td>
+<td>T-UI-01 通过，全流程可在浏览器演示</td>
+</tr>
+<tr>
+<td>M6</td>
+<td>测试集全量跑通 + 演示彩排</td>
+<td>P0 用例全绿，演示清单七条走通</td>
+</tr>
+</tbody>
+</table>
+<p>M1 与 M2 有依赖关系需先行，M3 与 M4 可并行，M5 依赖 M3/M4，M6 收尾。第二阶段（图形题）在 M6 之后另立方案，本方案只在 vision_input.py 的 <code>has_figure</code> 字段和界面提示上预留了接口。</p>
+<h2 id="八风险清单">八、风险清单</h2>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>影响</th>
+<th>对策</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>reasoner 解题仍出错</td>
+<td>答案错误交付给用户</td>
+<td>QC 独立重解交叉验证；程序规则把关；专家模式人工兜底；测试集持续回归</td>
+</tr>
+<tr>
+<td>视觉识别错字、错公式</td>
+<td>后续全错</td>
+<td>confidence 阈值拦截；界面展示识别结果供用户确认后再继续</td>
+</tr>
+<tr>
+<td>reasoner 响应慢</td>
+<td>演示冷场</td>
+<td>异步进度展示；答辩预跑热场题；限时不出结果时展示中间产物</td>
+</tr>
+<tr>
+<td>API 服务波动</td>
+<td>现场演示失败</td>
+<td>重试机制；保留一次成功运行的全套落盘文件作"录像回放"预案</td>
+</tr>
+<tr>
+<td>Windows 编码问题</td>
+<td>乱码、写文件失败</td>
+<td>全链路显式 UTF-8（见 4.4 第 6 条）</td>
+</tr>
+<tr>
+<td>密钥泄露</td>
+<td>账号被盗刷</td>
+<td>.env 不入库不上屏；T-SEC-01 专项检查</td>
+</tr>
+<tr>
+<td>Token 超预算</td>
+<td>费用失控</td>
+<td>budget.py 限额中止；界面计量条实时可见</td>
+</tr>
+<tr>
+<td>打回死循环</td>
+<td>流水线不终止</td>
+<td>轮次封顶 + 限额双保险（现有 + 新增）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="九历史问题对策索引">九、历史问题对策索引</h2>
+<p>立项时提出的每个问题在本方案中的着落：</p>
+<table>
+<thead>
+<tr>
+<th>历史问题</th>
+<th>对策位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OCR 工具没选型</td>
+<td>3.3，视觉大模型 API 适配层</td>
+</tr>
+<tr>
+<td>输入输出形式单一、不接 OCR</td>
+<td>3.3 输入适配 + 五、界面（拍照/文本双入口）</td>
+</tr>
+<tr>
+<td>Bug 多、只打过一条补丁</td>
+<td>4.4 稳定性设计（校验、把关、双保险、落盘）</td>
+</tr>
+<tr>
+<td>含参不等式等复杂题解不对</td>
+<td>3.2 模型分工 + 04 号文档 T-INP-03 回归用例</td>
+</tr>
+<tr>
+<td>解题烧 Token 且答案未必对</td>
+<td>3.2（好钢用在刀刃上）+ 4.4 第 3 条（程序把关零 Token）+ 六（限额与台账）</td>
+</tr>
+<tr>
+<td>想手动调试但用户端做不到</td>
+<td>4.3 专家模式</td>
+</tr>
+<tr>
+<td>答案缺过程输出</td>
+<td>3.2 Generator 用 reasoner 后天然输出推导；F4 将"含步骤"写为验收条件</td>
+</tr>
+<tr>
+<td>MD 输出不支持公式显示</td>
+<td>3.4 KaTeX 渲染</td>
+</tr>
+<tr>
+<td>几何/坐标系图形题</td>
+<td>明确划入第二阶段，接口已预留（七、阶段规划）</td>
+</tr>
+</tbody>
+</table>
+<footer class="genfoot">本 HTML 报告由同名 Markdown 自动生成 · Ogion · 2026-07-07</footer></main></body></html>

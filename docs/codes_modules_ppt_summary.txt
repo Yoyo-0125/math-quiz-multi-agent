@@ -1,0 +1,78 @@
+Math Quiz Multi-Agent codes 模块说明（PPT 版）
+
+总体流程：
+input.md -> Decomposer -> Reviewer -> Generator -> QC -> final 输出与 VSCode 预览。
+系统核心是“读题分析、审核、生成、质检、打回重做”的闭环。
+
+1. run_pipeline.py
+作用：流水线总控。
+设计理念：集中管理流程、配置、阈值、轮次、失败处理。
+实现方式：读取 config/pipeline_options.json 和命令行参数，依次运行 Decomposer、Reviewer、Generator、QC；不达标则打回重做；成功后生成 final 文件，失败时写 outputs/pipeline_failed.json。
+
+2. decomposer_agent.py
+作用：分析原始数学练习。
+设计理念：先由程序确定题目结构，再让模型分析知识点，避免把整套题误判为一道题。
+实现方式：analyze_input_structure() 扫描 Markdown，识别大题、小题、变式、总题数和 items 清单；模型输出 topic、subtopics、question_types、difficulty_distribution、generation_constraints 等。
+
+3. reviewer_agent.py
+作用：审核 Decomposer 的分析。
+设计理念：Decomposer 不直接进入生成，先通过 Reviewer 质量门控。
+实现方式：读取原题和 Decomposer JSON，检查知识点、题型、难度、结构、约束是否准确；输出 is_valid、score、issues。低于阈值则打回 Decomposer。
+
+4. generator_agent.py
+作用：生成相似题和答案。
+设计理念：生成受明确配置控制，默认“每道原题对应一道相似题”。
+实现方式：读取原题、Decomposer、Reviewer、generation_profile；支持 match_source 和 fixed 两种题量模式；生成后校验题目数、答案数，并调用 math_checks 做基础数学一致性检查。
+
+5. qc_agent.py
+作用：质量检查。
+设计理念：最后一道模型质量关，失败反馈聚焦到一个最高优先级问题，方便重做。
+实现方式：读取原题、Decomposer、Generator 输出、题目、答案和 generation_profile；检查数量、风格、知识点、答案正确性；输出 score、is_passed、issues、revision_instructions。
+
+6. validators.py
+作用：本地结构和格式校验。
+设计理念：不能完全依赖模型自觉输出合法 JSON 和正确格式，本地程序必须兜底。
+实现方式：校验 Decomposer、Reviewer、Generator、QC 的字段、类型、分数范围、题目/答案数量匹配；拦截 Generator 自我承认错误或答案未完成的情况。
+
+7. math_checks.py
+作用：基础数学一致性校验。
+设计理念：QC 是模型判断，可能漏掉“题目表达式和答案推导不一致”，因此增加可程序化检查。
+实现方式：目前重点检查简单二次不等式：提取题目二次式和答案因式分解，判断展开是否一致。
+
+8. common.py
+作用：公共工具和 DeepSeek API 封装。
+设计理念：所有 Agent 统一走一个模型调用入口，便于集中管理密钥、模型、thinking、JSON 修复、debug 和 token 预算。
+实现方式：读取 .env，设置模型和 thinking 参数，调用 DeepSeek API，处理 JSON 输出，空内容时自动关闭 thinking 重试，并写入 outputs/debug。
+
+9. budget.py
+作用：token 预算控制。
+设计理念：复杂输入可能消耗过高，需要总量和单次限制。
+实现方式：估算 token，记录 API usage；超过 warning 提醒，超过 stop 停止。当前默认 total_stop=270000，single_stop=65000。
+
+10. configure_options.py
+作用：终端交互式配置。
+设计理念：用户不应频繁手改 JSON，常用参数可在终端逐项调整。
+实现方式：询问输入文件、输出目录、阈值、轮次、生成题量模式、难度、知识点、题型、答案详略、模型、thinking、token 限额，并写入 config/pipeline_options.json。
+
+11. render_vscode_preview.py
+作用：生成 VSCode 可读预览。
+设计理念：输出文件分散，不便检查，需要集中预览。
+实现方式：读取 final 题目、答案、QC、Decomposer/Reviewer 摘要，合成 outputs/vscode_preview.md。
+
+12. run_default.py
+作用：默认快捷启动。
+设计理念：减少测试时输入长命令。
+实现方式：调用默认 pipeline 配置运行。
+
+模块关系：
+run_pipeline.py
+  -> decomposer_agent.py -> validators.py
+  -> reviewer_agent.py -> validators.py
+  -> generator_agent.py -> validators.py + math_checks.py
+  -> qc_agent.py -> validators.py
+  -> common.py -> budget.py
+  -> render_vscode_preview.py
+  -> configure_options.py
+
+一句话总结：
+本项目不是单次生成器，而是一个带分析、审核、生成、质检、重做、预算和本地校验的数学试题仿写流水线。

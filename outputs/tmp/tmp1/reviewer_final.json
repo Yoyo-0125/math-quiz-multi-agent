@@ -1,0 +1,26 @@
+{
+  "is_valid": true,
+  "score": 92,
+  "major_issues": [],
+  "minor_issues": [
+    "在source_structure中，将已知应用题（2）视为top_level可能不妥，它实际上是该部分的一个独立题目，与前面的(1)-(6)并列较合适",
+    "difficulty_distribution中easy 5可能偏低，第(2)题(x-a)(x-b)较简单，第(1)题因式分解也较直接",
+    "generation_constraints中“需要分类讨论”可以更具体，如指出二次项系数、判别式、根的大小关系等"
+  ],
+  "missing_points": [
+    "次级知识点中可以加入“因式分解”和“判别式法”",
+    "style_features可以补充“需要讨论二次项系数为0的情况”"
+  ],
+  "suggested_corrections": {
+    "topic": null,
+    "subtopics": [
+      "含参一元二次不等式",
+      "含参分式不等式",
+      "因式分解",
+      "判别式法"
+    ],
+    "grade_level": null,
+    "question_types": null
+  },
+  "review_summary": "总体分析准确，知识点、题型、难度等判断合理，结构描述清晰。仅有个别minor issue，如难度分布可调整，已知应用题归类可更精确，generation_constraints可更具体。建议小幅修改后使用。"
+}

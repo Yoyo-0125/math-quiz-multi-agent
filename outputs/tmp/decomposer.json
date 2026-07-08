@@ -1,0 +1,29 @@
+{
+  "topic": "二次函数图像的平移",
+  "subtopics": [
+    "顶点坐标",
+    "平移变换"
+  ],
+  "grade_level": "初中九年级",
+  "question_types": [
+    "填空题"
+  ],
+  "format_structure": "单题，描述二次函数图像的平移，求新顶点坐标",
+  "difficulty_distribution": {
+    "easy": 1,
+    "medium": 0,
+    "hard": 0
+  },
+  "style_features": [
+    "基础平移",
+    "直接应用平移规则"
+  ],
+  "latex_usage": "使用LaTeX表示函数表达式",
+  "generation_constraints": [
+    "平移方向与距离明确",
+    "计算顶点坐标最终结果"
+  ],
+  "uncertain_points": [
+    "是否需要明确平移规则的记忆或推导"
+  ]
+}

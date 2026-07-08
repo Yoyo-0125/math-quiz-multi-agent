@@ -1,0 +1,44 @@
+{
+  "input": "examples/input.md",
+  "output_dir": "outputs",
+  "review_threshold": 90,
+  "max_review_rounds": 2,
+  "qc_threshold": 90,
+  "max_qc_rounds": 2,
+  "max_generated_questions": 1,
+  "generation_profile": {
+    "question_count": 1,
+    "question_count_mode": "match_source",
+    "difficulty": "match_input",
+    "knowledge_points": "",
+    "question_types": "",
+    "style": "match_input",
+    "answer_detail": "concise",
+    "allow_input_compaction": false
+  },
+  "models": {
+    "default": "deepseek-v4-flash",
+    "decomposer": "deepseek-v4-flash",
+    "reviewer": "deepseek-v4-flash",
+    "generator": "deepseek-v4-flash",
+    "qc": "deepseek-v4-flash"
+  },
+  "thinking": {
+    "decomposer": false,
+    "reviewer": false,
+    "generator": true,
+    "qc": true
+  },
+  "reasoning_effort": {
+    "decomposer": "medium",
+    "reviewer": "medium",
+    "generator": "medium",
+    "qc": "medium"
+  },
+  "token_budget": {
+    "total_warning": 180000,
+    "total_stop": 270000,
+    "single_warning": 45000,
+    "single_stop": 65000
+  }
+}

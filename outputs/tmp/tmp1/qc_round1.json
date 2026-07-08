@@ -1,0 +1,18 @@
+{
+  "is_passed": true,
+  "score": 90,
+  "question_issues": [],
+  "answer_issues": [
+    {
+      "question_id": "第11题",
+      "severity": "major",
+      "problem": "答案中当n<15时，x< n/5 或 x≥ (n+15)/10，但解集方向与不等式符号不匹配，经检验应为 x ≤ (n+15)/10 或 x > n/5。",
+      "suggested_fix": "重新计算第11题答案，修正为：当 n<15 时，x ≤ (n+15)/10 或 x > n/5。"
+    }
+  ],
+  "style_issues": [],
+  "revision_instructions": [
+    "重新计算第11题答案，修正为：当 n<15 时，x ≤ (n+15)/10 或 x > n/5。"
+  ],
+  "qc_summary": "新题与原题知识点一致，难度匹配，格式风格相同，答案基本正确，但有1处答案错误（第11题），需修正后通过。"
+}

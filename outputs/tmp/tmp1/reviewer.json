@@ -1,0 +1,26 @@
+{
+  "is_valid": true,
+  "score": 85,
+  "major_issues": [],
+  "minor_issues": [
+    "subtopics 可以补充具体的平移规则，如左右平移对自变量加减、上下平移对函数值加减",
+    "difficulty_distribution 中等和困难均为0，但实际练习可能涉及综合应用，应适当调整",
+    "generation_constraints 不够具体，可细化到步骤：先求原顶点，再应用平移规则",
+    "uncertain_points 中“是否需要明确平移规则的记忆或推导”可更明确为“是否允许使用二次函数顶点式”"
+  ],
+  "missing_points": [
+    "原抛物线的顶点坐标未明确指出，应包含在分析中",
+    "未提及平移后解析式的变化"
+  ],
+  "suggested_corrections": {
+    "topic": null,
+    "subtopics": [
+      "顶点坐标",
+      "平移变换",
+      "平移规则：左加右减、上加下减"
+    ],
+    "grade_level": null,
+    "question_types": null
+  },
+  "review_summary": "分析基本准确，但subtopics可以更全面，generation_constraints需更具体，难度分布可稍作调整。"
+}
