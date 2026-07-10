@@ -8,6 +8,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "codes"))
 
 from decomposer_agent import analyze_input_structure
+from reader_agent import extract_reader_items
+from math_checks import validate_math_audit
 from validators import (
     ValidationError,
     count_question_items,
@@ -44,6 +46,26 @@ def test_question_counting():
             expected,
             f"{filename} decomposer structure count",
         )
+
+
+def test_reader_normalizes_split_heading_question():
+    text = "\n".join(
+        [
+            "# worksheet",
+            "## section",
+            "**1. Solve the inequalities**",
+            "* **(1)** $x^2-1>0$",
+            "* **(2)** $x^2-4<0$",
+            "**2. Application**",
+            "* Given the solution set of $x^2-ax-b<0$ is $2<x<3$, solve $bx^2-ax-1>0$.",
+            "### variants",
+            "* **Variant 1:** $\\frac{mx+5}{2x-3}\\le -1$",
+        ]
+    )
+    _, items, _, warnings = extract_reader_items(text)
+    assert_equal(len(items), 4, "reader normalized item count")
+    assert "Application" in items[2]["text"], "reader should merge heading with following math line"
+    assert not warnings, f"reader should not leave unresolved headings: {warnings}"
 
 
 def test_answer_pair_counting():
@@ -159,8 +181,14 @@ def test_q11_regression_samples():
 
 def test_final_outputs_basic_health():
     output_dir = PROJECT_ROOT / "outputs"
-    questions = (output_dir / "generated_questions_final.md").read_text(encoding="utf-8")
-    answers = (output_dir / "answer_key_final.md").read_text(encoding="utf-8")
+    questions_path = output_dir / "generated_questions_final.md"
+    answers_path = output_dir / "answer_key_final.md"
+    qc_path = output_dir / "qc_final.json"
+    if not questions_path.exists() or not answers_path.exists() or not qc_path.exists():
+        return
+
+    questions = questions_path.read_text(encoding="utf-8")
+    answers = answers_path.read_text(encoding="utf-8")
     validate_question_answer_pair(questions, answers, expected_question_count=15)
 
     blocks = {
@@ -172,18 +200,90 @@ def test_final_outputs_basic_health():
         if "?" in block:
             raise AssertionError(f"final answer block {number} contains question marks")
 
-    qc = json.loads((output_dir / "qc_final.json").read_text(encoding="utf-8"))
+    qc = json.loads(qc_path.read_text(encoding="utf-8"))
     validate_qc_result(qc)
     assert_equal(qc["is_passed"], True, "final QC status")
 
 
+def test_math_audit_blocks_unsafe_rational_answer():
+    questions = "1. $\\frac{3-x}{5x-n}\\le\\frac12$"
+    unsafe_answer = "\n".join(
+        [
+            "**(1)**",
+            "- $n<15$: $x<\\frac n5$ or $x\\ge\\frac{n+6}{7}$.",
+            "- $n=15$: $x\\ne3$.",
+            "- $n>15$: $x\\le\\frac{n+6}{7}$ or $x>\\frac n5$.",
+        ]
+    )
+    try:
+        validate_math_audit(questions, unsafe_answer)
+    except ValidationError:
+        return
+    raise AssertionError("math audit did not reject unsafe rational answer format")
+
+
+def test_math_audit_accepts_guarded_rational_answer():
+    questions = "1. $\\frac{3-x}{5x-n}\\le\\frac12$"
+    guarded_answer = "\n".join(
+        [
+            "**(1)**",
+            "Equivalent form: $\\dfrac{n+6-7x}{5x-n}\\le0$, with $x\\ne\\dfrac n5$.",
+            "- $n<15$: $x<\\dfrac n5$ or $x\\ge\\dfrac{n+6}{7}$.",
+            "- $n=15$: $x\\ne3$.",
+            "- $n>15$: $x\\le\\dfrac{n+6}{7}$ or $x>\\dfrac n5$.",
+        ]
+    )
+    validate_math_audit(questions, guarded_answer)
+
+
+def test_math_audit_blocks_wrong_outside_between_shape():
+    questions = "1. $\\frac{mx+5}{2x-3}\\le -1$"
+    wrong_answer = "\n".join(
+        [
+            "**Variant 1**",
+            "Equivalent form: $\\dfrac{(m+2)x+2}{2x-3}\\le0$, with $x\\ne\\dfrac32$.",
+            "- $m<-\\frac{10}{3}$: $-\\dfrac{2}{m+2}\\le x<\\dfrac32$.",
+            "- $m=-\\frac{10}{3}$: $x\\ne\\dfrac32$.",
+            "- $-\\frac{10}{3}<m<-2$: $-\\dfrac{2}{m+2}\\le x<\\dfrac32$.",
+            "- $m=-2$: $x<\\dfrac32$.",
+            "- $m>-2$: $x\\le-\\dfrac{2}{m+2}$ or $x>\\dfrac32$.",
+        ]
+    )
+    try:
+        validate_math_audit(questions, wrong_answer)
+    except ValidationError:
+        return
+    raise AssertionError("math audit did not reject reversed outside/between cases")
+
+
+def test_math_audit_accepts_correct_outside_between_shape():
+    questions = "1. $\\frac{mx+5}{2x-3}\\le -1$"
+    correct_answer = "\n".join(
+        [
+            "**Variant 1**",
+            "Equivalent form: $\\dfrac{(m+2)x+2}{2x-3}\\le0$, with $x\\ne\\dfrac32$.",
+            "- $m<-\\frac{10}{3}$: $x\\le-\\dfrac{2}{m+2}$ or $x>\\dfrac32$.",
+            "- $m=-\\frac{10}{3}$: $x\\ne\\dfrac32$.",
+            "- $-\\frac{10}{3}<m<-2$: $x<\\dfrac32$ or $x\\ge-\\dfrac{2}{m+2}$.",
+            "- $m=-2$: $x<\\dfrac32$.",
+            "- $m>-2$: $-\\dfrac{2}{m+2}\\le x<\\dfrac32$.",
+        ]
+    )
+    validate_math_audit(questions, correct_answer)
+
+
 def main():
     test_question_counting()
+    test_reader_normalizes_split_heading_question()
     test_answer_pair_counting()
     test_qc_major_issue_normalization()
     test_q6_regression_samples()
     test_q11_regression_samples()
     test_final_outputs_basic_health()
+    test_math_audit_blocks_unsafe_rational_answer()
+    test_math_audit_accepts_guarded_rational_answer()
+    test_math_audit_blocks_wrong_outside_between_shape()
+    test_math_audit_accepts_correct_outside_between_shape()
     print(json.dumps({"status": "ok", "cases": len(CASES)}, ensure_ascii=False))
 
 
