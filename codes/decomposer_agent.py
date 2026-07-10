@@ -101,8 +101,9 @@ Strict structure rules:
 2. Use source_structure.total_question_count as the authoritative detected item count.
 3. Count numbered subquestions such as (1), (2), ... as separate question items.
 4. Count variants such as "变式 1" as separate question items.
-5. Include source_structure in your JSON output exactly as provided in user_content.
+5. Do not copy source_structure or original_exercises into your JSON output. The program will attach source_structure after your response.
 6. difficulty_distribution should describe all detected question items, not only one representative item.
+7. Keep every string concise. Do not enumerate every source item in prose.
 """
 
 
@@ -249,9 +250,10 @@ def run(input_path, output_path):
     result = call_deepseek_json(
         system_prompt=DECOMPOSER_SYSTEM_PROMPT + DECOMPOSER_STRUCTURE_RULES,
         user_content=json.dumps(decomposer_input, ensure_ascii=False, indent=2),
-        max_tokens=2000,
+        max_tokens=4000,
         agent_name="decomposer",
         model_name=get_model_name("decomposer"),
+        response_format_json=True,
     )
 
     attach_source_structure(result, source_structure)
@@ -277,9 +279,10 @@ def revise(input_path, previous_decomposer_path, reviewer_feedback_path, output_
     result = call_deepseek_json(
         system_prompt=DECOMPOSER_REVISION_SYSTEM_PROMPT + DECOMPOSER_STRUCTURE_RULES,
         user_content=json.dumps(revision_input, ensure_ascii=False, indent=2),
-        max_tokens=2000,
+        max_tokens=4000,
         agent_name="decomposer_revise",
         model_name=get_model_name("decomposer"),
+        response_format_json=True,
 )
 
     attach_source_structure(result, source_structure)

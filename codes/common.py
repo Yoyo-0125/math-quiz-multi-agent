@@ -283,6 +283,19 @@ JSON 解析错误：
     )
 
 
+def looks_like_truncated_json(error, content):
+    if not content:
+        return False
+    near_end = error.pos >= max(0, len(content) - 80)
+    truncated_messages = [
+        "Unterminated string",
+        "Expecting value",
+        "Expecting ',' delimiter",
+        "Expecting property name enclosed in double quotes",
+    ]
+    return near_end and any(message in error.msg for message in truncated_messages)
+
+
 def call_deepseek_json(
     system_prompt,
     user_content,
@@ -337,6 +350,24 @@ def call_deepseek_json(
             )
 
             print(f"{agent_name} 输出了非法 JSON，已保存到：{debug_path}")
+
+            if attempt == 0 and looks_like_truncated_json(error, content):
+                retry_max_tokens = max(max_tokens * 2, max_tokens + 4000)
+                print(
+                    f"{agent_name} JSON 像是被截断，自动提高输出预算到 {retry_max_tokens} 后重试。"
+                )
+                content = call_deepseek_raw(
+                    system_prompt=system_prompt,
+                    user_content=user_content,
+                    max_tokens=retry_max_tokens,
+                    model_name=model_name,
+                    response_format_json=response_format_json,
+                    thinking_enabled=thinking_enabled,
+                    reasoning_effort=reasoning_effort,
+                    agent_name=f"{agent_name}_retry_long_json",
+                )
+                write_debug_file(agent_name, "raw_retry_long_json", content)
+                continue
 
             if attempt >= max_retries:
                 print("模型原始输出：")

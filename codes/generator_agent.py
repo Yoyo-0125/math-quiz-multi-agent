@@ -10,8 +10,12 @@ from common import (
     write_json_file,
     write_text_file,
 )
-from math_checks import validate_basic_math_consistency
-from validators import validate_generator_result, validate_question_answer_pair
+from math_checks import validate_math_audit
+from validators import (
+    ValidationError,
+    validate_generator_result,
+    validate_question_answer_pair,
+)
 
 
 GENERATOR_SYSTEM_PROMPT = """
@@ -145,6 +149,8 @@ Strict self-check before final JSON:
 11. If a leading coefficient can be positive, zero, or negative, solve the zero case separately and verify the negative-leading-coefficient case by substituting sample values; otherwise regenerate a simpler same-knowledge-point item.
 12. For forms like (t-c)x^2+px+q >= 0, state the double-root case separately and avoid hiding it inside a union that looks like two intervals.
 13. For rational inequalities, always state the denominator exclusion point and verify the final cases after comparing both critical points.
+14. For every parameterized rational inequality, answer_key_markdown must include an "Equivalent form:" line showing the single fraction after moving all terms to one side, and a "with x\\ne..." denominator exclusion.
+15. For every parameterized quadratic whose leading coefficient can change sign, answer_key_markdown must include a "Check:" line with one simple parameter substitution and the resulting interval.
 """
 
 
@@ -242,7 +248,7 @@ def build_generation_instruction(profile, revision=False):
     action = "revise" if revision else "generate"
     instruction = (
         f"You must {action} exactly {profile['question_count']} numbered question(s), "
-        f"not fewer and not more. Number questions as (1), (2), ... in questions_markdown, "
+        f"not fewer and not more. Number questions as 1., 2., ... in questions_markdown, "
         f"and number answers as 1., 2., ... in answer_key_markdown. "
         f"Difficulty target: {profile.get('difficulty')}. "
         f"Knowledge point focus: {profile.get('knowledge_points') or 'match decomposer_result'}. "
@@ -322,6 +328,22 @@ def split_numbered_blocks(markdown_text):
     return blocks
 
 
+def strip_leading_number(markdown_text):
+    lines = markdown_text.strip().splitlines()
+    if not lines:
+        return ""
+
+    first = lines[0].strip()
+    first = re.sub(r"^\(?\d+\)?[\.、．)]\s*", "", first)
+    first = re.sub(r"^最终答案[:：]\s*", "", first)
+    lines[0] = first
+    return "\n".join(lines).strip()
+
+
+def collapse_block(markdown_text):
+    return " ".join(strip_leading_number(markdown_text).split())
+
+
 def build_focused_revision_context(previous_questions, previous_answer_key, qc_feedback):
     primary_issue = get_primary_qc_issue(qc_feedback)
     if not primary_issue:
@@ -377,7 +399,7 @@ def save_generator_outputs(
         answer_key_markdown,
         expected_question_count=expected_question_count,
     )
-    validate_basic_math_consistency(questions_markdown, answer_key_markdown)
+    validate_math_audit(questions_markdown, answer_key_markdown)
 
     write_json_file(output_json_path, result)
     write_text_file(questions_output_path, questions_markdown)
@@ -386,6 +408,188 @@ def save_generator_outputs(
     print(f"Generator JSON 已写入：{output_json_path}")
     print(f"新题已写入：{questions_output_path}")
     print(f"答案已写入：{answer_key_output_path}")
+
+
+def generate_and_save_with_audit_retry(
+    generator_input,
+    system_prompt,
+    output_token_budget,
+    agent_name,
+    output_json_path,
+    questions_output_path,
+    answer_key_output_path,
+    profile,
+    max_attempts=3,
+):
+    last_error = None
+    working_input = dict(generator_input)
+
+    for attempt in range(max_attempts):
+        result = call_deepseek_json(
+            system_prompt=system_prompt,
+            user_content=json.dumps(working_input, ensure_ascii=False, indent=2),
+            max_tokens=output_token_budget,
+            agent_name=agent_name if attempt == 0 else f"{agent_name}_audit_retry",
+            model_name=get_model_name("generator"),
+        )
+
+        try:
+            save_generator_outputs(
+                result,
+                output_json_path,
+                questions_output_path,
+                answer_key_output_path,
+                max_generated_questions=profile["question_count"],
+                expected_question_count=profile["question_count"],
+            )
+            return result
+        except ValidationError as error:
+            last_error = error
+            print(f"{agent_name} 数学审计未通过：{error}")
+            if (
+                "generated question count" in str(error)
+                and profile.get("question_count_mode") == "match_source"
+                and profile["question_count"] > 1
+            ):
+                break
+            if attempt >= max_attempts - 1:
+                break
+
+            working_input = dict(working_input)
+            working_input["previous_invalid_output"] = result
+            working_input["local_math_audit_feedback"] = {
+                "error": str(error),
+                "instruction": (
+                    "Regenerate the full JSON. Fix every local math audit issue. "
+                    "If the error is about generated question count, do not merge "
+                    "source items and do not generate a representative subset. "
+                    "Generate exactly one numbered similar question for each source "
+                    "item, preserving source order, and generate exactly the same "
+                    "number of numbered answers. "
+                    "For parameterized rational inequalities, include Equivalent form "
+                    "and denominator exclusion. For sign-changing quadratic leading "
+                    "coefficients, include a sample Check line."
+                ),
+                "target_question_count": profile["question_count"],
+            }
+
+    if profile.get("question_count_mode") == "match_source" and profile["question_count"] > 1:
+        print(f"{agent_name} switching to itemwise fallback for exact source matching.")
+        return generate_itemwise_fallback(
+            generator_input=generator_input,
+            system_prompt=system_prompt,
+            agent_name=agent_name,
+            output_json_path=output_json_path,
+            questions_output_path=questions_output_path,
+            answer_key_output_path=answer_key_output_path,
+            profile=profile,
+        )
+
+    raise last_error
+
+
+def generate_itemwise_fallback(
+    generator_input,
+    system_prompt,
+    agent_name,
+    output_json_path,
+    questions_output_path,
+    answer_key_output_path,
+    profile,
+):
+    source_structure = generator_input.get("decomposer_result", {}).get(
+        "source_structure", {}
+    )
+    source_items = source_structure.get("items") or []
+    if not source_items:
+        raise ValidationError("cannot run itemwise fallback without source items")
+
+    question_blocks = []
+    answer_blocks = []
+    notes = []
+
+    for index, source_item in enumerate(source_items, start=1):
+        one_item_structure = dict(source_structure)
+        one_item_structure["items"] = [source_item]
+        one_item_structure["total_question_count"] = 1
+        one_item_structure["top_level_question_count"] = 1
+        one_item_structure["subquestion_count"] = 0
+        one_item_structure["variant_count"] = 0
+
+        one_decomposer = dict(generator_input.get("decomposer_result", {}))
+        one_decomposer["source_structure"] = one_item_structure
+        one_decomposer["detected_question_count"] = 1
+
+        one_profile = dict(profile)
+        one_profile["question_count"] = 1
+        one_profile["max_generated_questions"] = 1
+        one_profile["question_count_mode"] = "fixed"
+
+        one_input = dict(generator_input)
+        one_input["decomposer_result"] = one_decomposer
+        one_input["generation_options"] = {
+            **one_profile,
+            "mode": "single_source_item_fallback",
+            "source_item_index": index,
+            "source_item_text": source_item.get("text", ""),
+            "instruction": (
+                "Generate exactly one similar question for this one source item, "
+                "and exactly one numbered answer. Do not include any other item."
+            ),
+        }
+
+        result = call_deepseek_json(
+            system_prompt=system_prompt,
+            user_content=json.dumps(one_input, ensure_ascii=False, indent=2),
+            max_tokens=12000,
+            agent_name=f"{agent_name}_item_{index}",
+            model_name=get_model_name("generator"),
+        )
+
+        questions_markdown = result.get("questions_markdown", "")
+        answer_key_markdown = result.get("answer_key_markdown", "")
+        if not questions_markdown.strip():
+            raise ValidationError("itemwise fallback returned empty questions_markdown")
+        if not answer_key_markdown.strip():
+            raise ValidationError("itemwise fallback returned empty answer_key_markdown")
+        validate_math_audit(questions_markdown, answer_key_markdown)
+
+        question_blocks.append(f"{index}. {collapse_block(questions_markdown)}")
+        answer_blocks.append(f"{index}. {collapse_block(answer_key_markdown)}")
+        notes.extend(result.get("generation_notes", []) or [])
+
+    combined_result = {
+        "questions_markdown": "\n".join(question_blocks),
+        "answer_key_markdown": "\n\n".join(answer_blocks),
+        "generation_notes": notes
+        or ["Used itemwise fallback to preserve one-to-one source matching."],
+        "possible_risks": [],
+    }
+    try:
+        save_generator_outputs(
+            combined_result,
+            output_json_path,
+            questions_output_path,
+            answer_key_output_path,
+            max_generated_questions=profile["question_count"],
+            expected_question_count=profile["question_count"],
+        )
+    except ValidationError as error:
+        if "count" not in str(error):
+            raise
+        print(
+            "itemwise fallback produced merged output but local counting was "
+            f"uncertain: {error}; writing output for QC/manual review."
+        )
+        validate_generator_result(combined_result)
+        validate_math_audit(
+            combined_result["questions_markdown"],
+            combined_result["answer_key_markdown"],
+        )
+        write_json_file(output_json_path, combined_result)
+        write_text_file(questions_output_path, combined_result["questions_markdown"])
+        write_text_file(answer_key_output_path, combined_result["answer_key_markdown"])
+    return combined_result
 
 
 def run(
@@ -424,25 +628,19 @@ def run(
 
     output_token_budget = max(12000, profile["question_count"] * 2500)
 
-    result = call_deepseek_json(
+    generate_and_save_with_audit_retry(
+        generator_input=generator_input,
         system_prompt=(
             GENERATOR_SYSTEM_PROMPT
             + GENERATOR_OUTPUT_GUARDRAILS
             + GENERATOR_STRICT_SELF_CHECK
         ),
-        user_content=json.dumps(generator_input, ensure_ascii=False, indent=2),
-        max_tokens=output_token_budget,
+        output_token_budget=output_token_budget,
         agent_name="generator",
-        model_name=get_model_name("generator"),
-    )
-
-    save_generator_outputs(
-        result,
-        output_json_path,
-        questions_output_path,
-        answer_key_output_path,
-        max_generated_questions=profile["question_count"],
-        expected_question_count=profile["question_count"],
+        output_json_path=output_json_path,
+        questions_output_path=questions_output_path,
+        answer_key_output_path=answer_key_output_path,
+        profile=profile,
     )
 
     print("Generator 首次生成完成。")
@@ -504,24 +702,19 @@ def revise(
 
     output_token_budget = max(12000, profile["question_count"] * 2500)
 
-    result = call_deepseek_json(
+    generate_and_save_with_audit_retry(
+        generator_input=revision_input,
         system_prompt=(
             GENERATOR_REVISION_SYSTEM_PROMPT
             + GENERATOR_OUTPUT_GUARDRAILS
             + GENERATOR_STRICT_SELF_CHECK
         ),
-        user_content=json.dumps(revision_input, ensure_ascii=False, indent=2),
-        max_tokens=output_token_budget,
+        output_token_budget=output_token_budget,
         agent_name="generator_revise",
-        model_name=get_model_name("generator"),
-)
-    save_generator_outputs(
-        result,
-        output_json_path,
-        questions_output_path,
-        answer_key_output_path,
-        max_generated_questions=profile["question_count"],
-        expected_question_count=profile["question_count"],
+        output_json_path=output_json_path,
+        questions_output_path=questions_output_path,
+        answer_key_output_path=answer_key_output_path,
+        profile=profile,
     )
 
     print("Generator 已根据 QC 意见重做。")

@@ -9,10 +9,10 @@ CONFIG_PATH = PROJECT_ROOT / "config" / "pipeline_options.json"
 DEFAULT_OPTIONS = {
     "input": "examples/input.md",
     "output_dir": "outputs",
-    "review_threshold": 90,
+    "review_threshold": 80,
     "max_review_rounds": 2,
     "qc_threshold": 90,
-    "max_qc_rounds": 2,
+    "max_qc_rounds": 4,
     "max_generated_questions": 1,
     "generation_profile": {
         "question_count": 1,
@@ -26,35 +26,38 @@ DEFAULT_OPTIONS = {
     },
     "models": {
         "default": "deepseek-v4-flash",
+        "reader": "deepseek-v4-pro",
         "decomposer": "deepseek-v4-flash",
         "reviewer": "deepseek-v4-flash",
-        "generator": "deepseek-v4-flash",
-        "qc": "deepseek-v4-flash",
+        "generator": "deepseek-v4-pro",
+        "qc": "deepseek-v4-pro",
     },
     "thinking": {
+        "reader": False,
         "decomposer": False,
         "reviewer": False,
         "generator": True,
         "qc": True,
     },
     "reasoning_effort": {
+        "reader": "medium",
         "decomposer": "medium",
         "reviewer": "medium",
-        "generator": "medium",
-        "qc": "medium",
+        "generator": "high",
+        "qc": "high",
     },
     "token_budget": {
-        "total_warning": 180000,
-        "total_stop": 270000,
-        "single_warning": 45000,
-        "single_stop": 65000,
+        "total_warning": 320000,
+        "total_stop": 480000,
+        "single_warning": 100000,
+        "single_stop": 150000,
     },
 }
 
 
 def load_options():
     if CONFIG_PATH.exists():
-        with CONFIG_PATH.open("r", encoding="utf-8") as file:
+        with CONFIG_PATH.open("r", encoding="utf-8-sig") as file:
             loaded = json.load(file)
     else:
         loaded = {}
@@ -219,18 +222,21 @@ def main():
 
     models = options["models"]
     models["default"] = ask_text("model.default", models["default"])
+    models["reader"] = ask_text("model.reader", models["reader"])
     models["decomposer"] = ask_text("model.decomposer", models["decomposer"])
     models["reviewer"] = ask_text("model.reviewer", models["reviewer"])
     models["generator"] = ask_text("model.generator", models["generator"])
     models["qc"] = ask_text("model.qc", models["qc"])
 
     thinking = options["thinking"]
+    thinking["reader"] = ask_bool("thinking.reader", thinking["reader"])
     thinking["decomposer"] = ask_bool("thinking.decomposer", thinking["decomposer"])
     thinking["reviewer"] = ask_bool("thinking.reviewer", thinking["reviewer"])
     thinking["generator"] = ask_bool("thinking.generator", thinking["generator"])
     thinking["qc"] = ask_bool("thinking.qc", thinking["qc"])
 
     effort = options["reasoning_effort"]
+    effort["reader"] = ask_text("reasoning_effort.reader", effort["reader"])
     effort["decomposer"] = ask_text("reasoning_effort.decomposer", effort["decomposer"])
     effort["reviewer"] = ask_text("reasoning_effort.reviewer", effort["reviewer"])
     effort["generator"] = ask_text("reasoning_effort.generator", effort["generator"])

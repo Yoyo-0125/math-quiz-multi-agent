@@ -31,10 +31,10 @@ def _usage_total_tokens(usage):
 class TokenBudget:
     def __init__(
         self,
-        total_warning=180000,
-        total_stop=270000,
-        single_warning=45000,
-        single_stop=65000,
+        total_warning=320000,
+        total_stop=480000,
+        single_warning=100000,
+        single_stop=150000,
     ):
         self.total_warning = int(total_warning)
         self.total_stop = int(total_stop)

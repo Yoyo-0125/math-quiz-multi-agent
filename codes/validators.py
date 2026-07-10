@@ -303,6 +303,14 @@ def has_math_relation(text):
     return any(marker in text for marker in ["<", ">", "=", "\\le", "\\ge", "\\neq"])
 
 
+def next_meaningful_line(lines, start_index):
+    for following_line in lines[start_index:]:
+        following = strip_markdown_prefix(following_line)
+        if following and not following.startswith("#"):
+            return following
+    return ""
+
+
 def count_question_items(markdown_text):
     subquestion_count = 0
     variant_count = 0
@@ -325,22 +333,11 @@ def count_question_items(markdown_text):
             continue
 
         if is_top_level_line(normalized):
-            if has_math_relation(normalized):
-                top_level_count += 1
+            following = next_meaningful_line(lines, index + 1)
+            if count_subquestion_markers(following) or count_variant_markers(following):
                 continue
-
-            for following_line in lines[index + 1 :]:
-                following = strip_markdown_prefix(following_line)
-                if not following or following.startswith("#"):
-                    continue
-                if (
-                    has_math_relation(following)
-                    and not count_subquestion_markers(following)
-                    and not count_variant_markers(following)
-                    and not is_top_level_line(following)
-                ):
-                    top_level_count += 1
-                break
+            top_level_count += 1
+            continue
 
     if subquestion_count or variant_count:
         return subquestion_count + variant_count + top_level_count

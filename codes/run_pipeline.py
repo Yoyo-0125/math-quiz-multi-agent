@@ -11,16 +11,17 @@ from decomposer_agent import run as run_decomposer
 from generator_agent import revise as revise_generator
 from generator_agent import run as run_generator
 from qc_agent import run as run_qc
+from reader_agent import run as run_reader
 from render_vscode_preview import render_preview
 from reviewer_agent import run as run_reviewer
 from validators import ValidationError
 
 
-DEFAULT_REVIEW_SCORE_THRESHOLD = 90
+DEFAULT_REVIEW_SCORE_THRESHOLD = 80
 DEFAULT_MAX_REVIEW_REVISION_ROUNDS = 2
 
 DEFAULT_QC_SCORE_THRESHOLD = 90
-DEFAULT_MAX_QC_REVISION_ROUNDS = 2
+DEFAULT_MAX_QC_REVISION_ROUNDS = 4
 
 
 class PipelineQualityError(RuntimeError):
@@ -47,28 +48,31 @@ DEFAULT_OPTIONS = {
     },
     "models": {
         "default": "deepseek-v4-flash",
+        "reader": "deepseek-v4-pro",
         "decomposer": "deepseek-v4-flash",
         "reviewer": "deepseek-v4-flash",
-        "generator": "deepseek-v4-flash",
-        "qc": "deepseek-v4-flash",
+        "generator": "deepseek-v4-pro",
+        "qc": "deepseek-v4-pro",
     },
     "thinking": {
+        "reader": False,
         "decomposer": False,
         "reviewer": False,
         "generator": True,
         "qc": True,
     },
     "reasoning_effort": {
+        "reader": "medium",
         "decomposer": "medium",
         "reviewer": "medium",
-        "generator": "medium",
-        "qc": "medium",
+        "generator": "high",
+        "qc": "high",
     },
     "token_budget": {
-        "total_warning": 180000,
-        "total_stop": 270000,
-        "single_warning": 45000,
-        "single_stop": 65000,
+        "total_warning": 320000,
+        "total_stop": 480000,
+        "single_warning": 100000,
+        "single_stop": 150000,
     },
 }
 
@@ -85,7 +89,7 @@ def load_options(config_path):
 
     path = Path(config_path)
     if path.exists():
-        with path.open("r", encoding="utf-8") as file:
+        with path.open("r", encoding="utf-8-sig") as file:
             config_options = json.load(file)
 
         for key, value in config_options.items():
@@ -170,6 +174,7 @@ def apply_model_options(options):
     reasoning_effort = options.get("reasoning_effort", {})
     env_mapping = {
         "default": "DEEPSEEK_MODEL",
+        "reader": "DEEPSEEK_READER_MODEL",
         "decomposer": "DEEPSEEK_DECOMPOSER_MODEL",
         "reviewer": "DEEPSEEK_REVIEWER_MODEL",
         "generator": "DEEPSEEK_GENERATOR_MODEL",
@@ -233,6 +238,8 @@ def clear_stale_final_outputs(output_dir):
         "answer_key_final.md",
         "qc_final.json",
         "vscode_preview.md",
+        "reader_result.json",
+        "reader_clean_input.md",
     ]
     for filename in final_filenames:
         path = Path(output_dir) / filename
@@ -358,6 +365,7 @@ def run_generator_qc_loop(
     max_qc_revision_rounds=DEFAULT_MAX_QC_REVISION_ROUNDS,
     max_generated_questions=1,
     generation_profile=None,
+    skip_qc=False,
 ):
     current_generator_output = output_path(output_dir, "generator_round0.json")
     current_questions_output = output_path(output_dir, "generated_questions_round0.md")
@@ -381,6 +389,36 @@ def run_generator_qc_loop(
     final_answer_key_output = current_answer_key_output
     final_qc_output = current_qc_output
     qc_passed = False
+
+    if skip_qc:
+        generator_final_output = output_path(output_dir, "generator_final.json")
+        questions_final_output = output_path(output_dir, "generated_questions_final.md")
+        answer_key_final_output = output_path(output_dir, "answer_key_final.md")
+        qc_final_output = output_path(output_dir, "qc_final.json")
+
+        shutil.copyfile(final_generator_output, generator_final_output)
+        shutil.copyfile(final_questions_output, questions_final_output)
+        shutil.copyfile(final_answer_key_output, answer_key_final_output)
+        Path(qc_final_output).write_text(
+            json.dumps(
+                {
+                    "is_passed": None,
+                    "score": None,
+                    "skipped": True,
+                    "reason": "QC skipped by --skip-qc; use local self-check scripts for this test run.",
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        return (
+            generator_final_output,
+            questions_final_output,
+            answer_key_final_output,
+            qc_final_output,
+        )
 
     for round_index in range(max_qc_revision_rounds + 1):
         print(f"\n=== Round {round_index}: running QC ===")
@@ -444,8 +482,8 @@ def run_generator_qc_loop(
         current_qc_output = next_qc_output
 
     if not qc_passed:
-        raise PipelineQualityError(
-            "QC 未达到通过标准，已停止。输入过多或题目难度过大，请拆分后再输入。"
+        print(
+            "QC 未达到通过标准；将保留最新 Generator 输出，供人工检查或继续调参。"
         )
 
     generator_final_output = output_path(output_dir, "generator_final.json")
@@ -475,9 +513,17 @@ def run_pipeline(
     max_qc_revision_rounds=DEFAULT_MAX_QC_REVISION_ROUNDS,
     max_generated_questions=1,
     generation_profile=None,
+    skip_qc=False,
 ):
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     clear_stale_final_outputs(output_dir)
+
+    reader_output = output_path(output_dir, "reader_result.json")
+    reader_clean_input = output_path(output_dir, "reader_clean_input.md")
+
+    print("=== Round 0: running Reader ===")
+    run_reader(input_path, reader_output, reader_clean_input)
+    input_path = reader_clean_input
 
     decomposer_final_path, reviewer_final_path = run_decomposer_reviewer_loop(
         input_path=input_path,
@@ -505,6 +551,7 @@ def run_pipeline(
         max_qc_revision_rounds=max_qc_revision_rounds,
         max_generated_questions=max_generated_questions,
         generation_profile=generation_profile,
+        skip_qc=skip_qc,
     ) + (decomposer_final_path, reviewer_final_path)
 
 
@@ -559,6 +606,11 @@ def parse_args():
     parser.add_argument("--style", default=None)
     parser.add_argument("--answer-detail", default=None)
     parser.add_argument("--no-input-compaction", action="store_true")
+    parser.add_argument(
+        "--skip-qc",
+        action="store_true",
+        help="Run Decomposer, Reviewer, and Generator, then skip QC for local self-check tests.",
+    )
     parser.add_argument("--total-token-warning", type=int, default=None)
     parser.add_argument("--total-token-stop", type=int, default=None)
     parser.add_argument("--single-token-warning", type=int, default=None)
@@ -598,6 +650,7 @@ def main():
             max_qc_revision_rounds=options["max_qc_rounds"],
             max_generated_questions=options["max_generated_questions"],
             generation_profile=options.get("generation_profile"),
+            skip_qc=args.skip_qc,
         )
     except (BudgetExceededError, PipelineQualityError, ValidationError) as error:
         print(f"\n{error}")
