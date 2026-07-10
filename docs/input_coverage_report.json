@@ -1,0 +1,56 @@
+{
+  "input": "examples\\input.md",
+  "question_count": 15,
+  "line_coverage": {
+    "covered": 8,
+    "total": 8,
+    "ratio": 1.0,
+    "missing": []
+  },
+  "condition_coverage": {
+    "covered": 10,
+    "total": 10,
+    "ratio": 1.0,
+    "missing": []
+  },
+  "branch_coverage": {
+    "covered": 10,
+    "total": 10,
+    "ratio": 1.0,
+    "missing": []
+  },
+  "line_targets": {
+    "section_heading": true,
+    "top_level_question": true,
+    "subquestion": true,
+    "application_line": true,
+    "rational_inequality": true,
+    "quadratic_inequality": true,
+    "variant": true,
+    "parameter_constraint": true
+  },
+  "condition_targets": {
+    "strict_greater": true,
+    "strict_less": true,
+    "non_strict_ge": true,
+    "non_strict_le": true,
+    "fixed_root_order_condition": true,
+    "parameter_zero_case_needed": true,
+    "discriminant_positive_zero_negative": true,
+    "rational_denominator_exclusion": true,
+    "rational_root_order_swap": true,
+    "known_solution_parameter_solving": true
+  },
+  "branch_targets": {
+    "quadratic_factor_parameter_order": true,
+    "quadratic_fixed_order": true,
+    "quadratic_discriminant_all_real_or_none": true,
+    "quadratic_leading_coefficient_sign_change": true,
+    "known_interval_vieta_branch": true,
+    "rational_strict_branch": true,
+    "rational_non_strict_branch": true,
+    "rational_parameter_in_denominator": true,
+    "rational_parameter_in_numerator": true,
+    "variant_boundary_branch": true
+  }
+}

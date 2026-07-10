@@ -1,0 +1,110 @@
+{
+  "input": "examples\\input.md",
+  "answer_key": "examples\\input_answer_key.md",
+  "type_coverage": {
+    "covered": 9,
+    "total": 9,
+    "ratio": 1.0,
+    "missing": []
+  },
+  "difficulty_coverage": {
+    "covered": 3,
+    "total": 3,
+    "ratio": 1.0,
+    "missing": []
+  },
+  "efficiency": {
+    "estimated_input_tokens": 455,
+    "baseline_input_token_limit": 580,
+    "within_token_limit": true,
+    "evaluation_seconds": 0.0009,
+    "max_seconds": 360,
+    "within_time_limit": true
+  },
+  "answer_quality": {
+    "total_count": 15,
+    "wrong_count": 0,
+    "correct_count": 15,
+    "error_rate": 0.0,
+    "target_error_rate": 0.1,
+    "passes_error_target": true,
+    "wrong_items": [],
+    "item_results": {
+      "1.1": {
+        "checks": 5,
+        "errors": [],
+        "passed": true
+      },
+      "1.2": {
+        "checks": 3,
+        "errors": [],
+        "passed": true
+      },
+      "1.3": {
+        "checks": 6,
+        "errors": [],
+        "passed": true
+      },
+      "1.4": {
+        "checks": 6,
+        "errors": [],
+        "passed": true
+      },
+      "1.5": {
+        "checks": 6,
+        "errors": [],
+        "passed": true
+      },
+      "1.6": {
+        "checks": 7,
+        "errors": [],
+        "passed": true
+      },
+      "2": {
+        "checks": 3,
+        "errors": [],
+        "passed": true
+      },
+      "2.1": {
+        "checks": 6,
+        "errors": [],
+        "passed": true
+      },
+      "2.2": {
+        "checks": 6,
+        "errors": [],
+        "passed": true
+      },
+      "2.3": {
+        "checks": 6,
+        "errors": [],
+        "passed": true
+      },
+      "2.4": {
+        "checks": 6,
+        "errors": [],
+        "passed": true
+      },
+      "2.5": {
+        "checks": 7,
+        "errors": [],
+        "passed": true
+      },
+      "2.6": {
+        "checks": 7,
+        "errors": [],
+        "passed": true
+      },
+      "v1": {
+        "checks": 6,
+        "errors": [],
+        "passed": true
+      },
+      "v2": {
+        "checks": 7,
+        "errors": [],
+        "passed": true
+      }
+    }
+  }
+}

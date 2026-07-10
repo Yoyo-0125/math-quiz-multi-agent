@@ -1,0 +1,53 @@
+{
+  "runtime_limit_seconds": 360,
+  "skip_qc": false,
+  "review_threshold": 90,
+  "qc_threshold": 95,
+  "rounds_run": 3,
+  "all_within_limit": true,
+  "all_outputs_exist": true,
+  "rounds": [
+    {
+      "input": "examples\\coverage_rounds\\round_07_high_vectors_complex.md",
+      "output_dir": "outputs\\runtime_benchmark\\round_07_high_vectors_complex",
+      "command": "C:\\Users\\LG\\AppData\\Local\\Programs\\Python\\Python39\\python.exe codes/run_pipeline.py --input examples\\coverage_rounds\\round_07_high_vectors_complex.md --output-dir outputs\\runtime_benchmark\\round_07_high_vectors_complex --question-count-mode match_source --review-threshold 90 --qc-threshold 95 --max-review-rounds 2 --max-qc-rounds 2",
+      "elapsed_seconds": 43.92,
+      "runtime_limit_seconds": 360,
+      "within_runtime_limit": true,
+      "return_code": 0,
+      "timed_out": false,
+      "generated_questions_exists": true,
+      "answer_key_exists": true,
+      "failure_status_exists": false,
+      "stdout_tail": "Reviewer ��ɣ������д�룺outputs\\runtime_benchmark\\round_07_high_vectors_complex\\reviewer_round0.json\nReviewer result: is_valid=True, score=80\nReviewer failed; revising Decomposer for round 1.\nDecomposer �Ѹ��� Reviewer ��������������д�룺outputs\\runtime_benchmark\\round_07_high_vectors_complex\\decomposer_round1.json\n\n=== Round 1: running Reviewer ===\nReviewer ��ɣ������д�룺outputs\\runtime_benchmark\\round_07_high_vectors_complex\\reviewer_round1.json\nReviewer result: is_valid=True, score=95\nReviewer passed; Decomposer revision is not needed.\n\n=== Round 0: running Generator ===\nGenerator JSON ��д�룺outputs\\runtime_benchmark\\round_07_high_vectors_complex\\generator_round0.json\n������д�룺outputs\\runtime_benchmark\\round_07_high_vectors_complex\\generated_questions_round0.md\n����д�룺outputs\\runtime_benchmark\\round_07_high_vectors_complex\\answer_key_round0.md\nGenerator �״�������ɡ�\n\n=== Round 0: running QC ===\nQC ��ɣ������д�룺outputs\\runtime_benchmark\\round_07_high_vectors_complex\\qc_round0.json\nQC result: is_passed=True, score=100\nQC passed; Generator revision is not needed.\n\n=== Pipeline complete ===\nFinal Decomposer result: outputs\\runtime_benchmark\\round_07_high_vectors_complex\\decomposer_final.json\nFinal Reviewer result: outputs\\runtime_benchmark\\round_07_high_vectors_complex\\reviewer_final.json\nFinal Generator result: outputs\\runtime_benchmark\\round_07_high_vectors_complex\\generator_final.json\nFinal questions: outputs\\runtime_benchmark\\round_07_high_vectors_complex\\generated_questions_final.md\nFinal answer key: outputs\\runtime_benchmark\\round_07_high_vectors_complex\\answer_key_final.md\nFinal QC result: outputs\\runtime_benchmark\\round_07_high_vectors_complex\\qc_final.json\nVSCode preview: outputs\\runtime_benchmark\\round_07_high_vectors_complex\\vscode_preview.md\nToken usage: 12728 / 270000"
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_08_high_analytic_geometry.md",
+      "output_dir": "outputs\\runtime_benchmark\\round_08_high_analytic_geometry",
+      "command": "C:\\Users\\LG\\AppData\\Local\\Programs\\Python\\Python39\\python.exe codes/run_pipeline.py --input examples\\coverage_rounds\\round_08_high_analytic_geometry.md --output-dir outputs\\runtime_benchmark\\round_08_high_analytic_geometry --question-count-mode match_source --review-threshold 90 --qc-threshold 95 --max-review-rounds 2 --max-qc-rounds 2",
+      "elapsed_seconds": 65.78,
+      "runtime_limit_seconds": 360,
+      "within_runtime_limit": true,
+      "return_code": 0,
+      "timed_out": false,
+      "generated_questions_exists": true,
+      "answer_key_exists": true,
+      "failure_status_exists": false,
+      "stdout_tail": "Reviewer result: is_valid=True, score=85\nReviewer failed; revising Decomposer for round 1.\nDecomposer �Ѹ��� Reviewer ��������������д�룺outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\decomposer_round1.json\n\n=== Round 1: running Reviewer ===\nReviewer ��ɣ������д�룺outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\reviewer_round1.json\nReviewer result: is_valid=True, score=93\nReviewer passed; Decomposer revision is not needed.\n\n=== Round 0: running Generator ===\ngenerator ��ѧ���δͨ����generator output admits an unresolved answer error: ����\nGenerator JSON ��д�룺outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\generator_round0.json\n������д�룺outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\generated_questions_round0.md\n����д�룺outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\answer_key_round0.md\nGenerator �״�������ɡ�\n\n=== Round 0: running QC ===\nQC ��ɣ������д�룺outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\qc_round0.json\nQC result: is_passed=True, score=100\nQC passed; Generator revision is not needed.\n\n=== Pipeline complete ===\nFinal Decomposer result: outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\decomposer_final.json\nFinal Reviewer result: outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\reviewer_final.json\nFinal Generator result: outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\generator_final.json\nFinal questions: outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\generated_questions_final.md\nFinal answer key: outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\answer_key_final.md\nFinal QC result: outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\qc_final.json\nVSCode preview: outputs\\runtime_benchmark\\round_08_high_analytic_geometry\\vscode_preview.md\nToken usage: 17737 / 270000"
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_09_high_probability_calculus.md",
+      "output_dir": "outputs\\runtime_benchmark\\round_09_high_probability_calculus",
+      "command": "C:\\Users\\LG\\AppData\\Local\\Programs\\Python\\Python39\\python.exe codes/run_pipeline.py --input examples\\coverage_rounds\\round_09_high_probability_calculus.md --output-dir outputs\\runtime_benchmark\\round_09_high_probability_calculus --question-count-mode match_source --review-threshold 90 --qc-threshold 95 --max-review-rounds 2 --max-qc-rounds 2",
+      "elapsed_seconds": 81.86,
+      "runtime_limit_seconds": 360,
+      "within_runtime_limit": true,
+      "return_code": 0,
+      "timed_out": false,
+      "generated_questions_exists": true,
+      "answer_key_exists": true,
+      "failure_status_exists": false,
+      "stdout_tail": "Reviewer ��ɣ������д�룺outputs\\runtime_benchmark\\round_09_high_probability_calculus\\reviewer_round0.json\nReviewer result: is_valid=True, score=85\nReviewer failed; revising Decomposer for round 1.\nDecomposer �Ѹ��� Reviewer ��������������д�룺outputs\\runtime_benchmark\\round_09_high_probability_calculus\\decomposer_round1.json\n\n=== Round 1: running Reviewer ===\nReviewer ��ɣ������д�룺outputs\\runtime_benchmark\\round_09_high_probability_calculus\\reviewer_round1.json\nReviewer result: is_valid=True, score=90\nReviewer passed; Decomposer revision is not needed.\n\n=== Round 0: running Generator ===\nGenerator JSON ��д�룺outputs\\runtime_benchmark\\round_09_high_probability_calculus\\generator_round0.json\n������д�룺outputs\\runtime_benchmark\\round_09_high_probability_calculus\\generated_questions_round0.md\n����д�룺outputs\\runtime_benchmark\\round_09_high_probability_calculus\\answer_key_round0.md\nGenerator �״�������ɡ�\n\n=== Round 0: running QC ===\nQC ��ɣ������д�룺outputs\\runtime_benchmark\\round_09_high_probability_calculus\\qc_round0.json\nQC result: is_passed=True, score=100\nQC passed; Generator revision is not needed.\n\n=== Pipeline complete ===\nFinal Decomposer result: outputs\\runtime_benchmark\\round_09_high_probability_calculus\\decomposer_final.json\nFinal Reviewer result: outputs\\runtime_benchmark\\round_09_high_probability_calculus\\reviewer_final.json\nFinal Generator result: outputs\\runtime_benchmark\\round_09_high_probability_calculus\\generator_final.json\nFinal questions: outputs\\runtime_benchmark\\round_09_high_probability_calculus\\generated_questions_final.md\nFinal answer key: outputs\\runtime_benchmark\\round_09_high_probability_calculus\\answer_key_final.md\nFinal QC result: outputs\\runtime_benchmark\\round_09_high_probability_calculus\\qc_final.json\nVSCode preview: outputs\\runtime_benchmark\\round_09_high_probability_calculus\\vscode_preview.md\nToken usage: 15868 / 270000"
+    }
+  ]
+}

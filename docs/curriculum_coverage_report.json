@@ -1,0 +1,180 @@
+{
+  "sample_dir": "examples\\coverage_rounds",
+  "sample_count": 9,
+  "total_questions": 41,
+  "per_round_token_limit": 580,
+  "project_runtime_limit_seconds": 360,
+  "samples": [
+    {
+      "input": "examples\\coverage_rounds\\round_01_junior_algebra_core.md",
+      "questions": 5,
+      "estimated_tokens": 91,
+      "within_token_limit": true,
+      "answer_quality": {
+        "answer_key": "examples\\coverage_rounds\\round_01_junior_algebra_core_answer_key.md",
+        "expected_checks": 5,
+        "missing_checks": [],
+        "passed": true
+      }
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_02_junior_equations_ratio.md",
+      "questions": 5,
+      "estimated_tokens": 128,
+      "within_token_limit": true,
+      "answer_quality": {
+        "answer_key": "examples\\coverage_rounds\\round_02_junior_equations_ratio_answer_key.md",
+        "expected_checks": 5,
+        "missing_checks": [],
+        "passed": true
+      }
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_03_junior_functions_data.md",
+      "questions": 5,
+      "estimated_tokens": 131,
+      "within_token_limit": true,
+      "answer_quality": {
+        "answer_key": "examples\\coverage_rounds\\round_03_junior_functions_data_answer_key.md",
+        "expected_checks": 5,
+        "missing_checks": [],
+        "passed": true
+      }
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_04_high_functions.md",
+      "questions": 5,
+      "estimated_tokens": 127,
+      "within_token_limit": true,
+      "answer_quality": {
+        "answer_key": "examples\\coverage_rounds\\round_04_high_functions_answer_key.md",
+        "expected_checks": 5,
+        "missing_checks": [],
+        "passed": true
+      }
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_05_high_trig_inequality.md",
+      "questions": 4,
+      "estimated_tokens": 100,
+      "within_token_limit": true,
+      "answer_quality": {
+        "answer_key": "examples\\coverage_rounds\\round_05_high_trig_inequality_answer_key.md",
+        "expected_checks": 4,
+        "missing_checks": [],
+        "passed": true
+      }
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_06_high_sequences_binomial.md",
+      "questions": 4,
+      "estimated_tokens": 91,
+      "within_token_limit": true,
+      "answer_quality": {
+        "answer_key": "examples\\coverage_rounds\\round_06_high_sequences_binomial_answer_key.md",
+        "expected_checks": 4,
+        "missing_checks": [],
+        "passed": true
+      }
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_07_high_vectors_complex.md",
+      "questions": 4,
+      "estimated_tokens": 98,
+      "within_token_limit": true,
+      "answer_quality": {
+        "answer_key": "examples\\coverage_rounds\\round_07_high_vectors_complex_answer_key.md",
+        "expected_checks": 4,
+        "missing_checks": [],
+        "passed": true
+      }
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_08_high_analytic_geometry.md",
+      "questions": 4,
+      "estimated_tokens": 100,
+      "within_token_limit": true,
+      "answer_quality": {
+        "answer_key": "examples\\coverage_rounds\\round_08_high_analytic_geometry_answer_key.md",
+        "expected_checks": 4,
+        "missing_checks": [],
+        "passed": true
+      }
+    },
+    {
+      "input": "examples\\coverage_rounds\\round_09_high_probability_calculus.md",
+      "questions": 5,
+      "estimated_tokens": 104,
+      "within_token_limit": true,
+      "answer_quality": {
+        "answer_key": "examples\\coverage_rounds\\round_09_high_probability_calculus_answer_key.md",
+        "expected_checks": 5,
+        "missing_checks": [],
+        "passed": true
+      }
+    }
+  ],
+  "type_coverage": {
+    "covered": 36,
+    "total": 36,
+    "ratio": 1.0,
+    "missing": [],
+    "targets": {
+      "integer_and_radical_calculation": true,
+      "algebraic_simplification": true,
+      "factorization": true,
+      "linear_equation": true,
+      "linear_inequality": true,
+      "system_of_equations": true,
+      "fractional_equation": true,
+      "quadratic_equation": true,
+      "linear_function": true,
+      "inverse_proportion": true,
+      "quadratic_function_vertex": true,
+      "percent_word_problem": true,
+      "statistics_mean_median": true,
+      "basic_probability": true,
+      "ratio_and_proportion": true,
+      "sets": true,
+      "log_domain": true,
+      "exponential_equation": true,
+      "log_equation": true,
+      "function_extreme": true,
+      "trig_identity": true,
+      "trig_value": true,
+      "absolute_value_inequality": true,
+      "arithmetic_sequence": true,
+      "geometric_sequence": true,
+      "series_sum": true,
+      "vectors": true,
+      "complex_numbers": true,
+      "binomial_theorem": true,
+      "analytic_line": true,
+      "circle": true,
+      "ellipse": true,
+      "combination_counting": true,
+      "variance": true,
+      "derivative": true,
+      "tangent_slope": true
+    }
+  },
+  "difficulty_coverage": {
+    "covered": 3,
+    "total": 3,
+    "ratio": 1.0,
+    "missing": [],
+    "targets": {
+      "junior_basic": true,
+      "senior_basic": true,
+      "senior_comprehensive": true
+    }
+  },
+  "answer_quality": {
+    "files_checked": 9,
+    "wrong_files": [],
+    "error_rate": 0.0,
+    "target_error_rate": 0.05,
+    "passes_error_target": true
+  },
+  "over_token_files": []
+}
