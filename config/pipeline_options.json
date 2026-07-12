@@ -1,11 +1,12 @@
 {
-  "input": "examples/input.md",
+  "input": "examples\\input.md",
   "output_dir": "outputs",
-  "review_threshold": 80,
+  "review_threshold": 85,
   "max_review_rounds": 2,
   "qc_threshold": 90,
-  "max_qc_rounds": 4,
+  "max_qc_rounds": 2,
   "max_generated_questions": 1,
+  "selected_item_ids": "",
   "generation_profile": {
     "question_count": 1,
     "question_count_mode": "match_source",
@@ -14,34 +15,45 @@
     "question_types": "",
     "style": "match_input",
     "answer_detail": "concise",
-    "allow_input_compaction": false
+    "allow_input_compaction": true
   },
   "models": {
-    "default": "deepseek-v4-pro",
-    "decomposer": "deepseek-v4-pro",
-    "reviewer": "deepseek-v4-pro",
+    "default": "deepseek-v4-flash",
+    "reader": "deepseek-v4-pro",
+    "decomposer": "deepseek-v4-flash",
+    "reviewer": "deepseek-v4-flash",
     "generator": "deepseek-v4-pro",
-    "qc": "deepseek-v4-pro",
-    "reader": "deepseek-v4-pro"
+    "qc": "deepseek-v4-pro"
   },
   "thinking": {
+    "reader": false,
     "decomposer": false,
     "reviewer": false,
-    "generator": true,
-    "qc": false,
-    "reader": false
+    "generator": false,
+    "qc": false
   },
   "reasoning_effort": {
+    "reader": "medium",
     "decomposer": "medium",
     "reviewer": "medium",
-    "generator": "high",
-    "qc": "high",
-    "reader": "medium"
+    "generator": "medium",
+    "qc": "medium"
   },
   "token_budget": {
-    "total_warning": 320000,
-    "total_stop": 480000,
-    "single_warning": 100000,
-    "single_stop": 150000
+    "total_warning": 180000,
+    "total_stop": 270000,
+    "single_warning": 45000,
+    "single_stop": 80000
+  },
+  "runtime": {
+    "request_timeout_seconds": 90,
+    "generator_warning_seconds": 120,
+    "generator_timeout_seconds": 180,
+    "fallback_on_error": true,
+    "fallback_on_timeout": true
+  },
+  "result_store": {
+    "enabled": true,
+    "dir": "result"
   }
 }

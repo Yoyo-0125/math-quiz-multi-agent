@@ -1,4 +1,0 @@
-{
-  "status": "failed",
-  "reason": "generator missing required keys: generation_notes, possible_risks"
-}

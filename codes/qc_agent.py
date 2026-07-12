@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 
 from common import (
@@ -128,6 +129,287 @@ Answer verification rules:
 """
 
 
+QC_ORIGINALITY_RULES = """
+
+Originality rules:
+1. Similarity to the source is required at the knowledge-point level, not at the wording/formula-copy level.
+2. Use originality_report.high_similarity_pairs as hard evidence. If it is not empty, report the highest-similarity pair as a major question issue.
+3. A generated item should fail QC if it mostly copies a source item's sentence pattern or formula skeleton and only changes numbers, variable names, or inequality direction.
+4. The suggested_fix should ask Generator to rewrite the flagged item by changing wording and formula surface while preserving the same knowledge point and difficulty.
+"""
+
+
+TASK_VERBS = [
+    "求",
+    "解",
+    "讨论",
+    "化简",
+    "计算",
+    "证明",
+    "判断",
+    "写出",
+    "指出",
+    "确定",
+    "因式分解",
+]
+
+
+def add_major_issue(result, issue_type, question_id, problem, suggested_fix, max_score=84):
+    issue = {
+        "question_id": str(question_id),
+        "severity": "major",
+        "problem": problem,
+        "suggested_fix": suggested_fix,
+    }
+    key = "answer_issues" if issue_type == "answer" else "question_issues"
+    result.setdefault(key, [])
+    if isinstance(result[key], list):
+        existing = [
+            item
+            for item in result[key]
+            if isinstance(item, dict)
+            and item.get("question_id") == issue["question_id"]
+            and item.get("problem") == issue["problem"]
+        ]
+        if not existing:
+            result[key].insert(0, issue)
+    result["is_passed"] = False
+    try:
+        result["score"] = min(int(result.get("score", 0)), max_score)
+    except (TypeError, ValueError):
+        result["score"] = max_score
+    instructions = result.setdefault("revision_instructions", [])
+    if isinstance(instructions, list) and suggested_fix not in instructions:
+        instructions.insert(0, suggested_fix)
+    return result
+
+
+def strip_math_and_markup(text):
+    text = re.sub(r"\$\$.*?\$\$", "", text or "", flags=re.S)
+    text = re.sub(r"\$.*?\$", "", text, flags=re.S)
+    text = re.sub(r"\\\(.+?\\\)", "", text, flags=re.S)
+    text = re.sub(r"\\\[.+?\\\]", "", text, flags=re.S)
+    text = re.sub(r"^\s*\d+[.)]\s*", "", text)
+    text = re.sub(r"[*_`#>\-]", "", text)
+    return text.strip()
+
+
+def question_has_task(question_text):
+    visible_text = strip_math_and_markup(question_text)
+    if any(verb in visible_text for verb in TASK_VERBS):
+        return True
+    lowered = visible_text.lower()
+    if any(word in lowered for word in ["solve", "find", "compute", "simplify", "discuss", "prove"]):
+        return True
+    return False
+
+
+def looks_like_bare_expression_question(question_text):
+    visible_text = strip_math_and_markup(question_text)
+    math_tokens = len(re.findall(r"\$|\\\(|\\\[|=", question_text or ""))
+    return math_tokens > 0 and len(visible_text) <= 8 and not question_has_task(question_text)
+
+
+def apply_question_completeness_audit(result, generated_questions):
+    blocks = split_numbered_question_blocks(generated_questions)
+    for index, block in enumerate(blocks, start=1):
+        if looks_like_bare_expression_question(block) or not question_has_task(block):
+            add_major_issue(
+                result,
+                "question",
+                index,
+                "Question stem has no explicit task; it only gives an expression/formula or lacks an action verb.",
+                "Rewrite the question with a clear task such as 求、解、讨论、化简、计算 or 写出, and keep the answer aligned.",
+                max_score=78,
+            )
+            break
+    return result
+
+
+def parse_numeric_recurrence(question_text):
+    compact = re.sub(r"\s+", "", question_text or "")
+    compact = compact.replace("\\{", "{").replace("\\}", "}")
+    match_initial = re.search(r"a_?\{?1\}?=([+-]?\d+)", compact)
+    match_recur = re.search(
+        r"a_?\{?n\+1\}?=([+-]?\d*)a_?\{?n\}?([+-]\d+)",
+        compact,
+    )
+    if not match_initial or not match_recur:
+        return None
+    initial = int(match_initial.group(1))
+    coeff_text = match_recur.group(1)
+    if coeff_text in ["", "+"]:
+        coeff = 1
+    elif coeff_text == "-":
+        coeff = -1
+    else:
+        coeff = int(coeff_text)
+    offset = int(match_recur.group(2))
+    return initial, coeff, offset
+
+
+def parse_geometric_closed_form(answer_text):
+    compact = re.sub(r"\s+", "", answer_text or "")
+    compact = compact.replace("\\cdot", "*")
+    compact = compact.replace("{", "").replace("}", "")
+    match = re.search(
+        r"a_n=([+-]?\d+)\*?\\?cdot?([+-]?\d+)\^\(?n-1\)?([+-]\d+)?",
+        compact,
+    )
+    if not match:
+        match = re.search(r"a_n=([+-]?\d+)\*?([+-]?\d+)\^\(?n-1\)?([+-]\d+)?", compact)
+    if not match:
+        return None
+    scale = int(match.group(1))
+    base = int(match.group(2))
+    shift = int(match.group(3) or "0")
+    return scale, base, shift
+
+
+def recurrence_value(formula, n):
+    scale, base, shift = formula
+    return scale * (base ** (n - 1)) + shift
+
+
+def apply_recurrence_answer_audit(result, generated_questions, answer_key):
+    question_blocks = split_numbered_question_blocks(generated_questions)
+    answer_blocks = split_numbered_question_blocks(answer_key)
+    for index, question in enumerate(question_blocks, start=1):
+        recurrence = parse_numeric_recurrence(question)
+        if not recurrence:
+            continue
+        answers_by_index = {idx + 1: block for idx, block in enumerate(answer_blocks)}
+        answer = answers_by_index.get(index, "")
+        formula = parse_geometric_closed_form(answer)
+        if not formula:
+            continue
+        initial, coeff, offset = recurrence
+        a1 = recurrence_value(formula, 1)
+        a2 = recurrence_value(formula, 2)
+        expected_a2 = coeff * initial + offset
+        if a1 != initial or a2 != expected_a2:
+            add_major_issue(
+                result,
+                "answer",
+                index,
+                "Recurrence closed-form answer fails substitution check for a1 or a2.",
+                "Recompute the recurrence formula and verify the first term and one recurrence step before returning.",
+                max_score=70,
+            )
+            break
+    return result
+
+
+def normalize_for_similarity(text):
+    text = re.sub(r"\s+", "", text or "")
+    text = re.sub(r"[\[\]【】（）(){}#*_`~:：，。,.;；!！?？、\"'“”‘’<>《》]", "", text)
+    return text.lower()
+
+
+def char_ngrams(text, n=2):
+    text = normalize_for_similarity(text)
+    if len(text) < n:
+        return {text} if text else set()
+    return {text[index : index + n] for index in range(len(text) - n + 1)}
+
+
+def similarity_score(left, right):
+    left_set = char_ngrams(left)
+    right_set = char_ngrams(right)
+    if not left_set or not right_set:
+        return 0.0
+    return len(left_set & right_set) / len(left_set | right_set)
+
+
+def split_numbered_question_blocks(markdown_text):
+    blocks = []
+    current = []
+    for line in (markdown_text or "").splitlines():
+        if re.match(r"^\s*\d+[.)]\s+", line):
+            if current:
+                blocks.append("\n".join(current).strip())
+            current = [line]
+        elif current:
+            current.append(line)
+    if current:
+        blocks.append("\n".join(current).strip())
+    if not blocks and markdown_text.strip():
+        blocks.append(markdown_text.strip())
+    return blocks
+
+
+def build_originality_report(decomposer_result, generated_questions):
+    source_items = decomposer_result.get("source_structure", {}).get("items") or []
+    source_texts = [item.get("text", "") for item in source_items if item.get("text")]
+    generated_blocks = split_numbered_question_blocks(generated_questions)
+    pairs = []
+
+    for generated_index, generated_text in enumerate(generated_blocks, start=1):
+        best = {"source_index": None, "score": 0.0, "source_text": ""}
+        for source_index, source_text in enumerate(source_texts, start=1):
+            score = similarity_score(source_text, generated_text)
+            if score > best["score"]:
+                best = {
+                    "source_index": source_index,
+                    "score": round(score, 4),
+                    "source_text": source_text,
+                }
+        if best["source_index"] is not None:
+            pairs.append(
+                {
+                    "generated_question_id": str(generated_index),
+                    "source_item_id": str(best["source_index"]),
+                    "similarity": best["score"],
+                    "generated_text": generated_text[:240],
+                    "source_text": best["source_text"][:240],
+                }
+            )
+
+    high_similarity_pairs = [
+        pair
+        for pair in pairs
+        if pair["similarity"] >= 0.72
+        and min(len(normalize_for_similarity(pair["generated_text"])), len(normalize_for_similarity(pair["source_text"]))) >= 10
+    ]
+    return {
+        "threshold": 0.72,
+        "pairs": pairs,
+        "high_similarity_pairs": high_similarity_pairs,
+    }
+
+
+def apply_originality_report(result, originality_report):
+    high_pairs = originality_report.get("high_similarity_pairs") or []
+    if not high_pairs:
+        return result
+
+    pair = max(high_pairs, key=lambda item: item.get("similarity", 0))
+    issue = {
+        "question_id": pair.get("generated_question_id", "unknown"),
+        "severity": "major",
+        "problem": (
+            "Generated question is too similar to source item "
+            f"{pair.get('source_item_id')} (similarity={pair.get('similarity')})."
+        ),
+        "suggested_fix": (
+            "Rewrite this item as a transformed variant: keep the same knowledge point "
+            "and difficulty, but change wording and formula surface instead of only changing numbers."
+        ),
+    }
+    result.setdefault("question_issues", [])
+    if isinstance(result["question_issues"], list):
+        result["question_issues"].insert(0, issue)
+    result["is_passed"] = False
+    try:
+        result["score"] = min(int(result.get("score", 0)), 84)
+    except (TypeError, ValueError):
+        result["score"] = 84
+    instructions = result.setdefault("revision_instructions", [])
+    if isinstance(instructions, list):
+        instructions.insert(0, issue["suggested_fix"])
+    return result
+
+
 def run(
     original_input_path,
     decomposer_json_path,
@@ -142,6 +424,7 @@ def run(
     generator_result = read_json_file(generator_json_path)
     generated_questions = read_text_file(questions_path)
     answer_key = read_text_file(answer_key_path)
+    originality_report = build_originality_report(decomposer_result, generated_questions)
 
     qc_input = {
         "original_exercises": original_exercises,
@@ -150,6 +433,7 @@ def run(
         "generated_questions": generated_questions,
         "answer_key": answer_key,
         "generation_profile": generation_profile or {},
+        "originality_report": originality_report,
     }
 
     result = call_deepseek_json(
@@ -158,6 +442,7 @@ def run(
             + QC_OUTPUT_GUARDRAILS
             + QC_GENERATION_PROFILE_RULES
             + QC_ANSWER_VERIFICATION_RULES
+            + QC_ORIGINALITY_RULES
             + QC_FOCUSED_FEEDBACK_RULES
         ),
         user_content=json.dumps(qc_input, ensure_ascii=False, indent=2),
@@ -166,6 +451,9 @@ def run(
         model_name=get_model_name("qc"),
 )
 
+    apply_originality_report(result, originality_report)
+    apply_question_completeness_audit(result, generated_questions)
+    apply_recurrence_answer_audit(result, generated_questions, answer_key)
     validate_qc_result(result)
     write_json_file(output_json_path, result)
 

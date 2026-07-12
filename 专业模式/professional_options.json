@@ -1,0 +1,15 @@
+{
+  "candidate_count": 2,
+  "max_candidate_attempts": 4,
+  "selector_min_score": 95,
+  "duplicate_similarity_threshold": 0.88,
+  "output_dir": "outputs_professional",
+  "qc_threshold": 90,
+  "max_qc_rounds": 4,
+  "runtime": {
+    "generator_warning_seconds": 60,
+    "generator_timeout_seconds": 120,
+    "fallback_on_error": true,
+    "fallback_on_timeout": true
+  }
+}

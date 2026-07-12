@@ -11,6 +11,7 @@ from common import (
     write_text_file,
 )
 from math_checks import validate_math_audit
+from math_latex_sanitizer import sanitize_math_markdown
 from validators import (
     ValidationError,
     validate_generator_result,
@@ -130,6 +131,8 @@ GENERATOR_OUTPUT_GUARDRAILS = """
 10. 必须遵守 user_content 中的 generation_options.max_generated_questions。若原始输入是一整套题集，只抽取最有代表性的题型生成同类题，不要生成整套题集。
 11. questions_markdown 中生成的主问题数量不得超过 generation_options.max_generated_questions；除非 max_generated_questions 大于 1，否则不要输出多个大题、多个章节或题组。
 12. answer_key_markdown 必须与 questions_markdown 的题目数量一一对应，且答案总长度应控制在 1200 汉字以内。
+13. 每道题必须有明确任务动词，例如：求、解、讨论、化简、计算、证明、判断、写出。禁止只输出函数表达式、递推式、方程或裸公式。
+14. 如果题目给出递推式，题干必须明确要求“求通项公式”或其他具体目标，答案必须代回验证首项和至少一个递推步。
 """
 
 
@@ -151,6 +154,20 @@ Strict self-check before final JSON:
 13. For rational inequalities, always state the denominator exclusion point and verify the final cases after comparing both critical points.
 14. For every parameterized rational inequality, answer_key_markdown must include an "Equivalent form:" line showing the single fraction after moving all terms to one side, and a "with x\\ne..." denominator exclusion.
 15. For every parameterized quadratic whose leading coefficient can change sign, answer_key_markdown must include a "Check:" line with one simple parameter substitution and the resulting interval.
+"""
+
+
+GENERATOR_ORIGINALITY_GUARDRAILS = """
+
+Originality rules:
+1. "Similar question" means same knowledge point, same solving method, and comparable difficulty; it does not mean copying the source wording with new numbers.
+2. Do not only replace constants, variable names, or inequality signs while preserving the same expression skeleton.
+3. For each generated item, change at least two of these surface dimensions when possible: context wording, coefficient pattern, factor order, asked quantity, condition wording, or representation form.
+4. Keep the same curriculum target, but avoid reusing a source item's full sentence pattern or full formula pattern.
+5. When source_structure.items is available, use each source item as a type reference, not as a template to paraphrase line by line.
+6. If a generated item has more than about 70% textual/formula overlap with its source item, regenerate it before returning JSON.
+7. generation_notes must briefly state how you avoided direct copying, for example "changed coefficient relation and question wording while keeping rational inequality solving".
+8. During revision, if QC reports over-similarity, rewrite the flagged item instead of only changing numbers.
 """
 
 
@@ -256,7 +273,8 @@ def build_generation_instruction(profile, revision=False):
         f"Style target: {profile.get('style')}. "
         f"Answer detail: {profile.get('answer_detail')}. "
         "The answer count must equal the question count exactly. "
-        "Use decomposer_result.source_structure to understand the original worksheet item count and section structure."
+        "Use decomposer_result.source_structure to understand the original worksheet item count and section structure. "
+        "Generated questions must be transformed variants, not near-copies of source items."
     )
     if revision:
         instruction += (
@@ -268,7 +286,23 @@ def build_generation_instruction(profile, revision=False):
         instruction += (
             " The default mode is one-to-one source matching: generate one similar "
             "question for each item in decomposer_result.source_structure.items, "
-            "preserving item order and broad section/type coverage."
+            "preserving item order and broad section/type coverage, but changing wording "
+            "and formula surface enough that the result is clearly not a direct copy."
+        )
+    if profile.get("candidate_strategy"):
+        instruction += (
+            f" Professional candidate strategy #{profile.get('candidate_index')}: "
+            f"{profile.get('candidate_strategy')}. "
+            f"{profile.get('candidate_strategy_instruction', '')} "
+            "This candidate must be visibly different from other candidates while "
+            "remaining correct and at the same curriculum level."
+        )
+    avoid_questions = profile.get("avoid_candidate_questions") or []
+    if avoid_questions:
+        instruction += (
+            " Avoid repeating these earlier professional candidate questions: "
+            + json.dumps(avoid_questions, ensure_ascii=False)
+            + "."
         )
     return instruction
 
@@ -385,8 +419,10 @@ def save_generator_outputs(
 ):
     validate_generator_result(result)
 
-    questions_markdown = result.get("questions_markdown", "")
-    answer_key_markdown = result.get("answer_key_markdown", "")
+    questions_markdown = sanitize_math_markdown(result.get("questions_markdown", ""))
+    answer_key_markdown = sanitize_math_markdown(result.get("answer_key_markdown", ""))
+    result["questions_markdown"] = questions_markdown
+    result["answer_key_markdown"] = answer_key_markdown
 
     if not questions_markdown.strip():
         raise RuntimeError("Generator 没有生成 questions_markdown")
@@ -534,7 +570,9 @@ def generate_itemwise_fallback(
             "source_item_text": source_item.get("text", ""),
             "instruction": (
                 "Generate exactly one similar question for this one source item, "
-                "and exactly one numbered answer. Do not include any other item."
+                "and exactly one numbered answer. Do not include any other item. "
+                "Use the source item only as a knowledge-point reference; change the "
+                "wording and formula surface enough to avoid a near-copy."
             ),
         }
 
@@ -634,6 +672,7 @@ def run(
             GENERATOR_SYSTEM_PROMPT
             + GENERATOR_OUTPUT_GUARDRAILS
             + GENERATOR_STRICT_SELF_CHECK
+            + GENERATOR_ORIGINALITY_GUARDRAILS
         ),
         output_token_budget=output_token_budget,
         agent_name="generator",
@@ -708,6 +747,7 @@ def revise(
             GENERATOR_REVISION_SYSTEM_PROMPT
             + GENERATOR_OUTPUT_GUARDRAILS
             + GENERATOR_STRICT_SELF_CHECK
+            + GENERATOR_ORIGINALITY_GUARDRAILS
         ),
         output_token_budget=output_token_budget,
         agent_name="generator_revise",

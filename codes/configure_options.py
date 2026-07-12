@@ -52,6 +52,17 @@ DEFAULT_OPTIONS = {
         "single_warning": 100000,
         "single_stop": 150000,
     },
+    "runtime": {
+        "request_timeout_seconds": 90,
+        "generator_warning_seconds": 60,
+        "generator_timeout_seconds": 120,
+        "fallback_on_error": True,
+        "fallback_on_timeout": True,
+    },
+    "result_store": {
+        "enabled": True,
+        "dir": "result",
+    },
 }
 
 
@@ -80,6 +91,14 @@ def load_options():
         "token_budget": {
             **DEFAULT_OPTIONS["token_budget"],
             **loaded.get("token_budget", {}),
+        },
+        "runtime": {
+            **DEFAULT_OPTIONS["runtime"],
+            **loaded.get("runtime", {}),
+        },
+        "result_store": {
+            **DEFAULT_OPTIONS["result_store"],
+            **loaded.get("result_store", {}),
         },
         "generation_profile": {
             **DEFAULT_OPTIONS["generation_profile"],
@@ -162,6 +181,12 @@ def print_options(options):
         print(f"   {key}: {value}")
     print("12. token_budget:")
     for key, value in options["token_budget"].items():
+        print(f"   {key}: {value}")
+    print("13. runtime:")
+    for key, value in options["runtime"].items():
+        print(f"   {key}: {value}")
+    print("14. result_store:")
+    for key, value in options["result_store"].items():
         print(f"   {key}: {value}")
 
 
@@ -267,6 +292,38 @@ def main():
         0,
         1000000,
     )
+
+    runtime = options["runtime"]
+    runtime["request_timeout_seconds"] = ask_int(
+        "runtime.request_timeout_seconds",
+        runtime["request_timeout_seconds"],
+        1,
+        3600,
+    )
+    runtime["generator_warning_seconds"] = ask_int(
+        "runtime.generator_warning_seconds",
+        runtime["generator_warning_seconds"],
+        0,
+        3600,
+    )
+    runtime["generator_timeout_seconds"] = ask_int(
+        "runtime.generator_timeout_seconds",
+        runtime["generator_timeout_seconds"],
+        1,
+        3600,
+    )
+    runtime["fallback_on_error"] = ask_bool(
+        "runtime.fallback_on_error",
+        runtime["fallback_on_error"],
+    )
+    runtime["fallback_on_timeout"] = ask_bool(
+        "runtime.fallback_on_timeout",
+        runtime["fallback_on_timeout"],
+    )
+
+    result_store = options["result_store"]
+    result_store["enabled"] = ask_bool("result_store.enabled", result_store["enabled"])
+    result_store["dir"] = ask_text("result_store.dir", result_store["dir"])
 
     save_options(options)
     print_options(options)

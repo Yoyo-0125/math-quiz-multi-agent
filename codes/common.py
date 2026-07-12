@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -97,6 +98,31 @@ def get_api_base():
     return os.getenv("DEEPSEEK_API_BASE", DEFAULT_API_BASE).rstrip("/")
 
 
+def get_agent_env_prefix(agent_name=None):
+    normalized = normalize_agent_name(agent_name)
+    return f"DEEPSEEK_{normalized.upper()}_" if normalized else "DEEPSEEK_"
+
+
+def get_request_timeout(agent_name=None):
+    load_env_file()
+    prefix = get_agent_env_prefix(agent_name)
+    value = os.getenv(f"{prefix}REQUEST_TIMEOUT") or os.getenv("DEEPSEEK_REQUEST_TIMEOUT", "90")
+    try:
+        return max(1, int(value))
+    except ValueError:
+        return 90
+
+
+def get_request_warning_seconds(agent_name=None):
+    load_env_file()
+    prefix = get_agent_env_prefix(agent_name)
+    value = os.getenv(f"{prefix}REQUEST_WARNING") or os.getenv("DEEPSEEK_REQUEST_WARNING", "0")
+    try:
+        return max(0, int(value))
+    except ValueError:
+        return 0
+
+
 def get_model_name(agent_name=None, default_model=DEFAULT_MODEL_NAME):
     load_env_file()
 
@@ -112,7 +138,11 @@ def get_model_name(agent_name=None, default_model=DEFAULT_MODEL_NAME):
 def normalize_agent_name(agent_name):
     if not agent_name:
         return None
-    return agent_name.replace("_revise", "")
+    lowered = str(agent_name).lower()
+    for prefix in ["reader", "decomposer", "reviewer", "generator", "qc"]:
+        if lowered.startswith(prefix):
+            return prefix
+    return str(agent_name).replace("_revise", "")
 
 
 def get_thinking_options(agent_name=None):
@@ -216,14 +246,31 @@ def call_deepseek_raw(
         method="POST",
     )
 
+    request_timeout = get_request_timeout(agent_name)
+    warning_seconds = get_request_warning_seconds(agent_name)
+    warning_timer = None
+    if warning_seconds > 0 and warning_seconds < request_timeout:
+        warning_timer = threading.Timer(
+            warning_seconds,
+            lambda: print(
+                f"{agent_name} has been running for {warning_seconds}s; "
+                f"will stop at {request_timeout}s if no response returns."
+            ),
+        )
+        warning_timer.daemon = True
+        warning_timer.start()
+
     try:
-        with urllib.request.urlopen(request, timeout=90) as response:
+        with urllib.request.urlopen(request, timeout=request_timeout) as response:
             response_text = response.read().decode("utf-8")
     except urllib.error.HTTPError as error:
         error_body = error.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"请求 DeepSeek API 失败，HTTP {error.code}: {error_body}") from error
     except Exception as error:
         raise RuntimeError(f"请求 DeepSeek API 失败：{error}") from error
+    finally:
+        if warning_timer is not None:
+            warning_timer.cancel()
 
     try:
         response_json = json.loads(response_text)

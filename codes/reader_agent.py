@@ -67,6 +67,84 @@ def clean_item_text(text):
     return cleaned.strip()
 
 
+def is_choice_option_line(text):
+    return re.match(r"^[A-H]\s*[.．、)]\s*", str(text or "").strip(), re.IGNORECASE) is not None
+
+
+def is_solution_fragment(text):
+    text = str(text or "").strip()
+    if not text:
+        return True
+    if is_top_level_line(text):
+        return False
+    solution_markers = [
+        "代入",
+        "综上",
+        "因此",
+        "所以",
+        "故",
+        "得",
+        "答案",
+        "最终答案",
+        "分",
+        "\\therefore",
+    ]
+    task_markers = [
+        "求",
+        "解",
+        "证明",
+        "判断",
+        "计算",
+        "讨论",
+        "已知",
+        "若",
+        "如图",
+        "设",
+        "比较",
+        "选择",
+        "写出",
+        "化为",
+    ]
+    has_solution_marker = any(marker in text for marker in solution_markers)
+    has_task_marker = any(marker in text for marker in task_markers)
+    if has_solution_marker and not has_task_marker:
+        return True
+    if len(text) <= 18 and has_math_relation(text) and not has_task_marker:
+        return True
+    return False
+
+
+def reader_duplicate_key(text):
+    text = re.sub(r"^\s*\d+\s*[.．、:)]\s*", "", str(text or ""))
+    text = re.sub(r"\s+", "", text)
+    return text[:220]
+
+
+def postprocess_reader_items(items):
+    processed = []
+    seen = {}
+    for item in items:
+        text = clean_item_text(item.get("text", ""))
+        if not text:
+            continue
+        if is_choice_option_line(text):
+            if processed:
+                processed[-1]["text"] = (processed[-1]["text"].rstrip() + "\n" + text).strip()
+            continue
+        if item.get("kind") == "implicit" and is_solution_fragment(text):
+            continue
+        key = reader_duplicate_key(text)
+        if len(key) >= 24:
+            seen[key] = seen.get(key, 0) + 1
+            if seen[key] > 1:
+                continue
+        next_item = dict(item)
+        next_item["id"] = len(processed) + 1
+        next_item["text"] = text
+        processed.append(next_item)
+    return processed
+
+
 def is_heading(line):
     return line.strip().startswith("#")
 
@@ -118,6 +196,11 @@ def extract_reader_items(markdown_text):
         if not normalized:
             continue
 
+        if is_choice_option_line(normalized) and items:
+            items[-1]["text"] = (items[-1]["text"].rstrip() + "\n" + clean_item_text(raw_line)).strip()
+            pending_header = None
+            continue
+
         is_variant = count_variant_markers(normalized) > 0
         is_subquestion = count_subquestion_markers(normalized) > 0
         is_top_level = is_top_level_line(normalized)
@@ -152,6 +235,7 @@ def extract_reader_items(markdown_text):
     if pending_header:
         warnings.append(f"Unresolved heading-like item without math content: {pending_header}")
 
+    items = postprocess_reader_items(items)
     return normalized_text, items, sections, warnings
 
 

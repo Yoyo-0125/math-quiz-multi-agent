@@ -14,10 +14,10 @@
     "missing": []
   },
   "efficiency": {
-    "estimated_input_tokens": 455,
+    "estimated_input_tokens": 366,
     "baseline_input_token_limit": 580,
     "within_token_limit": true,
-    "evaluation_seconds": 0.0009,
+    "evaluation_seconds": 0.0012,
     "max_seconds": 360,
     "within_time_limit": true
   },
