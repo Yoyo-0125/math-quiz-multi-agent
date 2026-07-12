@@ -3816,7 +3816,9 @@ def render_page(message=""):
           latestInputText = document.getElementById('input-source').value;
           if (inputMode === 'preview') renderInputPreview();
         }}
-        refreshRunStatus();
+        if (action !== 'save_input') {{
+          refreshRunStatus();
+        }}
       }} catch (error) {{
         let detail = error.name === 'AbortError' ? 'request timed out' : error.message;
         let diagnosis = '';
@@ -4150,6 +4152,18 @@ class Handler(BaseHTTPRequestHandler):
             raw_body = self.rfile.read(length).decode("utf-8")
             if self.path.startswith("/action"):
                 form = json.loads(raw_body)
+                if form.get("action") == "save_input":
+                    input_path = project_path(form.get("input", load_options().get("input", "examples/input.md")))
+                    write_text(input_path, normalize_input_text(form.get("input_text", "")))
+                    update_run_state(error_message="")
+                    self.respond_json(
+                        {
+                            "ok": True,
+                            "message": f"Input saved: {rel_path(input_path)}",
+                            "state": get_run_state(),
+                        }
+                    )
+                    return
                 message = self.handle_action(form)
                 self.respond_json({"ok": True, "message": message, "state": get_live_run_state()})
                 return
